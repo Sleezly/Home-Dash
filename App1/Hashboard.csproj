@@ -95,10 +95,31 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\LightControl.xaml.cs">
+      <DependentUpon>LightControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\UserControlHandlercs.cs" />
+    <Compile Include="Controls\MediaControl.xaml.cs">
+      <DependentUpon>MediaControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Panel Builders\DateTimePanelBuilder.cs" />
+    <Compile Include="Panel Builders\MediaPlayerPanelBuilder.cs" />
+    <Compile Include="Panel Builders\StatePanelBuilder.cs" />
+    <Compile Include="Panel Builders\NameOnlyPanelBuilder.cs" />
+    <Compile Include="Panel Builders\GenericPanelBuilder.cs" />
+    <Compile Include="PanelData.cs" />
+    <Compile Include="Utilities\ColorConverter.cs" />
+    <Compile Include="Panel Builders\LightPanelBuilder.cs" />
+    <Compile Include="Panel Builders\DarkSkyPanelBuilder.cs" />
+    <Compile Include="Panel Builders\PanelBuilderBase.cs" />
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utilities\LoadImage.cs" />
+    <Compile Include="Web\WebRequests.cs" />
+    <Compile Include="Utilities\RGB.cs" />
+    <Compile Include="Web\Entity.cs" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -107,6 +128,32 @@
     <None Include="App1_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets\background-blue.jpg" />
+    <Content Include="Assets\color-wheel.png" />
+    <Content Include="Assets\color-wheel2.png" />
+    <Content Include="Assets\media-play.png" />
+    <Content Include="Assets\media-shuffle.png" />
+    <Content Include="Assets\media-skip-next.png" />
+    <Content Include="Assets\media-skip-previous.png" />
+    <Content Include="Assets\media-stop.png" />
+    <Content Include="Assets\media-pause.png" />
+    <Content Include="Assets\power.png" />
+    <Content Include="Assets\volume-high.png" />
+    <Content Include="Assets\volume-low.png" />
+    <Content Include="Assets\volume-medium.png" />
+    <Content Include="Assets\volume-minus.png" />
+    <Content Include="Assets\volume-off.png" />
+    <Content Include="Assets\volume-plus.png" />
+    <Content Include="Assets\weather_fog.png" />
+    <Content Include="Assets\weather_clear_night.png" />
+    <Content Include="Assets\weather_cloudy.png" />
+    <Content Include="Assets\weather_partly_cloudy_night.png" />
+    <Content Include="Assets\weather_partly_cloudy_day.png" />
+    <Content Include="Assets\weather_clear_day.png" />
+    <Content Include="Assets\weather_rain.png" />
+    <Content Include="Assets\weather_snow.png" />
+    <Content Include="Assets\weather_snow_rain.png" />
+    <Content Include="Assets\weather_windy.png" />
     <Content Include="Properties\Default.rd.xml" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\SplashScreen.scale-200.png" />
@@ -121,14 +168,28 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Page Include="Controls\LightControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="MainPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\MediaControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
       <Version>6.0.8</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Toolkit.Uwp.UI.Controls">
+      <Version>2.2.0</Version>
+    </PackageReference>
+    <PackageReference Include="Newtonsoft.Json">
+      <Version>11.0.2</Version>
     </PackageReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">

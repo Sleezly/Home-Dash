@@ -1,21 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 
-namespace App1
+namespace HashBoard
 {
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
@@ -28,6 +19,12 @@ namespace App1
         /// </summary>
         public App()
         {
+//#if DEBUG
+//            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.Auto;
+//#else
+            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
+//#endif
+
             this.InitializeComponent();
             this.Suspending += OnSuspending;
         }
