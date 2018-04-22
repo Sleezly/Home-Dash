@@ -7,11 +7,12 @@
 
     <StackPanel x:Name="RootPanel" Orientation="Vertical" Background="Black" Padding="4">
         <TextBlock x:Name="DeviceText" HorizontalAlignment="Center" Text="DeviceText" Foreground="White" FontSize="24"/>
-        <Grid Margin="0,12,0,12">
-            <Grid x:Name="Wheel" Width="280" Height="280"/>
+        <Grid Background="Transparent" PointerPressed="Grid_PointerPressed" PointerReleased="Grid_PointerReleased" PointerExited="Grid_PointerExited">
+            <Grid x:Name="Wheel" Margin="0,12,0,12" Width="280" Height="280"/>
+            <Ellipse x:Name="WheelCircle" Width="24" Height="24" Stroke="White" Fill="Transparent" StrokeThickness="2" HorizontalAlignment="Left" VerticalAlignment="Top"/>
             <!--<Image x:Name="MediaImage" Width="280" Height="280" Source="ms-appx:///Assets/color-wheel2.png" PointerMoved="MediaImage_PointerMoved"/>-->
-            <Ellipse Width="280" Height="280" Stroke="White" StrokeThickness="2" />
-            <Ellipse x:Name="WheelCircle" Width="24" Height="24" Stroke="White" Fill="Transparent" StrokeThickness="2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <!--<Ellipse Width="280" Height="280" Stroke="White" StrokeThickness="2" />-->
+            <!--<Ellipse x:Name="WheelCircle" Width="24" Height="24" Stroke="White" Fill="Transparent" StrokeThickness="2" HorizontalAlignment="Center" VerticalAlignment="Center"/>-->
         </Grid>
         <Grid Width="252">
             <Rectangle x:Name="ColorTemperature" Width="240" Height="12" Stroke="White">

@@ -116,6 +116,7 @@
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utilities\HSV.cs" />
     <Compile Include="Utilities\LoadImage.cs" />
     <Compile Include="Web\WebRequests.cs" />
     <Compile Include="Utilities\RGB.cs" />

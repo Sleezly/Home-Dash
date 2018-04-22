@@ -1,4 +1,5 @@
 ﻿using System;
+using Windows.UI;
 
 namespace HashBoard
 {
@@ -12,7 +13,7 @@ namespace HashBoard
         public static RGB MiredToRGB(int colorTemperature)
         {
             RGB rgb = new RGB();
-            
+
             double kelvin = ConvertColorTemperatureToKelvin(colorTemperature) / 100;
 
             // Calculate Red
@@ -79,6 +80,88 @@ namespace HashBoard
             }
 
             return rgb;
+        }
+
+        public static Color HSVtoRGB(float h, float s, float v)
+        {
+            byte r = 0;
+            byte g = 0;
+            byte b = 0;
+            h /= 60;
+            int i = (int)Math.Floor(h);
+            float f = h - i;
+            float p = v * (1 - s);
+            float q = v * (1 - s * f);
+            float t = v * (1 - s * (1 - f));
+            switch (i)
+            {
+                case 0:
+                    r = (byte)(255 * v);
+                    g = (byte)(255 * t);
+                    b = (byte)(255 * p);
+                    break;
+                case 1:
+                    r = (byte)(255 * q);
+                    g = (byte)(255 * v);
+                    b = (byte)(255 * p);
+                    break;
+                case 2:
+                    r = (byte)(255 * p);
+                    g = (byte)(255 * v);
+                    b = (byte)(255 * t);
+                    break;
+                case 3:
+                    r = (byte)(255 * p);
+                    g = (byte)(255 * q);
+                    b = (byte)(255 * v);
+                    break;
+                case 4:
+                    r = (byte)(255 * t);
+                    g = (byte)(255 * p);
+                    b = (byte)(255 * v);
+                    break;
+                default:
+                    r = (byte)(255 * v);
+                    g = (byte)(255 * p);
+                    b = (byte)(255 * q);
+                    break;
+            }
+            return Color.FromArgb(255, r, g, b);
+        }
+
+        public static HSV RGBtoHSV(RGB rgb)
+        {
+            double delta, min;
+            double h = 0, s, v;
+
+            min = Math.Min(Math.Min(rgb.R, rgb.G), rgb.B);
+            v = Math.Max(Math.Max(rgb.R, rgb.G), rgb.B);
+            delta = v - min;
+
+            if (v == 0.0)
+                s = 0;
+            else
+                s = delta / v;
+
+            if (s == 0)
+                h = 0.0;
+
+            else
+            {
+                if (rgb.R == v)
+                    h = (rgb.G - rgb.B) / delta;
+                else if (rgb.G == v)
+                    h = 2 + (rgb.B - rgb.R) / delta;
+                else if (rgb.B == v)
+                    h = 4 + (rgb.R - rgb.G) / delta;
+
+                h *= 60;
+
+                if (h < 0.0)
+                    h = h + 360;
+            }
+
+            return new HSV(h, s, v / 255);
         }
     }
 }

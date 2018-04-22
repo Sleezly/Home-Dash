@@ -33,6 +33,15 @@ namespace HashBoard
                 Convert.ToByte(b / rgbList.Count));
         }
 
+        public static RGB GetBlendedColor(double percentage, Color left, Color right)
+        {
+            double r = Math.Sqrt(Math.Pow(left.R, 2) * percentage + Math.Pow(right.R, 2) * (1.0 - percentage));
+            double g = Math.Sqrt(Math.Pow(left.G, 2) * percentage + Math.Pow(right.G, 2) * (1.0 - percentage));
+            double b = Math.Sqrt(Math.Pow(left.B, 2) * percentage + Math.Pow(right.B, 2) * (1.0 - percentage));
+
+            return new RGB(Convert.ToByte(r), Convert.ToByte(g), Convert.ToByte(b));
+        }
+
         public SolidColorBrush CreateSolidColorBrush()
         {
             return new SolidColorBrush(Color.FromArgb(255, R, G, B));
