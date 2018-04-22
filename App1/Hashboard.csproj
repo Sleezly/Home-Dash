@@ -130,8 +130,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\background-blue.jpg" />
-    <Content Include="Assets\color-wheel.png" />
-    <Content Include="Assets\color-wheel2.png" />
     <Content Include="Assets\media-play.png" />
     <Content Include="Assets\media-shuffle.png" />
     <Content Include="Assets\media-skip-next.png" />

@@ -61,7 +61,7 @@ namespace Hashboard
 
         private void DrawColorWheel()
         {
-            Grid canvas = this.FindName("Wheel") as Grid;
+            Grid canvas = this.FindName("ColorWheel") as Grid;
 
             for (int i = 0; i < 360; i++)
             {
@@ -77,9 +77,7 @@ namespace Hashboard
                 line.VerticalAlignment = VerticalAlignment.Top;
 
                 line.Tapped += ColorWheelLine_Tapped;
-                line.PointerPressed += ColorWheelLine_PointerPressed;
                 line.PointerMoved += ColorWheelLine_PointerMoved;
-                line.PointerReleased += ColorWheelLine_PointerReleased;
 
                 canvas.Children.Add(line);
             }
@@ -101,7 +99,7 @@ namespace Hashboard
 
             if (PanelEntity.Attributes.ContainsKey("brightness"))
             {
-                UpdateBrightness(Convert.ToByte(PanelEntity.Attributes["brightness"]));
+                UpdateBrightness(Convert.ToDouble(PanelEntity.Attributes["brightness"]));
             }
             else
             {
@@ -115,11 +113,12 @@ namespace Hashboard
                     Convert.ToInt32(PanelEntity.Attributes["color_temp"]),
                     Convert.ToInt32(PanelEntity.Attributes["max_mireds"]),
                     Convert.ToInt32(PanelEntity.Attributes["min_mireds"]));
+
+                ShowColorTemperatureCircle(Visibility.Visible);
             }
             else
             {
-                Ellipse ellipse = this.FindName("ColorTemperatureCircle") as Ellipse;
-                ellipse.Visibility = Visibility.Collapsed;
+                ShowColorTemperatureCircle(Visibility.Collapsed);
             }
 
             if (PanelEntity.Attributes.ContainsKey("rgb_color"))
@@ -134,76 +133,52 @@ namespace Hashboard
                 };
 
                 SetColorCircleLocationAndColor(rgb);
+
+                ShowColorWheelCircle(Visibility.Visible);
             }
             else
             {
-                Ellipse ellipse = this.FindName("WheelCircle") as Ellipse;
-                ellipse.Visibility = Visibility.Collapsed;
+                ShowColorWheelCircle(Visibility.Collapsed);
             }
         }
 
+        /// <summary>
+        /// Updates the Color Wheel based on input from color source.
+        /// </summary>
+        /// <param name="rgb"></param>
         private void SetColorCircleLocationAndColor(RGB rgb)
         {
-            Grid grid = this.FindName("Wheel") as Grid;
+            Grid grid = this.FindName("ColorWheel") as Grid;
+            Ellipse ellipse = this.FindName("ColorWheelCircle") as Ellipse;
 
             HSV hsv = ColorConverter.RGBtoHSV(rgb);
 
             Line line = grid.Children[(int)hsv.H] as Line;
-
-            Ellipse ellipse = this.FindName("WheelCircle") as Ellipse;
 
             double angle = (Math.PI / 180) * hsv.H;
             double radian = (grid.Width / 2) * hsv.S;
             double x = radian * Math.Cos(angle);
             double y = radian * Math.Sin(angle);
 
+            ellipse.Fill = rgb.CreateSolidColorBrush();
+
             ellipse.Margin = new Thickness(
                 x + grid.Width / 2,
                 y + grid.Height / 2,
                 0,
                 0);
-
-            ellipse.Fill = rgb.CreateSolidColorBrush();
         }
 
-        private void MoveColorCircleToLineAndSetColor(Line line, Point pointFromLine, Point pointFromParent, Thickness marginFromParent)
+        /// <summary>
+        /// Updates the Color Wheel based on input from the UI.
+        /// </summary>
+        /// <param name="line"></param>
+        /// <param name="pointFromLine"></param>
+        /// <param name="pointFromParent"></param>
+        /// <param name="marginFromParent"></param>
+        private void UpdateColorWheel(Line line, Point pointFromLine, Point pointFromParent, Thickness marginFromParent)
         {
-            /*
-            Grid grid = this.FindName("Wheel") as Grid;
-            Ellipse ellipse = this.FindName("WheelCircle") as Ellipse;
-
-            //ellipse.Visibility = Visibility.Visible;
-            //ellipse.Margin = new Thickness(
-            //    e.GetCurrentPoint(grid as UIElement).Position.X,// - grid.ActualWidth / 2,
-            //    e.GetCurrentPoint(grid as UIElement).Position.Y - grid.ActualHeight / 2,
-            //    0, 0);
-
-            Line line = sender as Line;
-
-            LinearGradientBrush linearGradientBrush = line.Stroke as LinearGradientBrush;
-
-            Color colorStart = linearGradientBrush.GradientStops[0].Color;
-            Color colorEnd = linearGradientBrush.GradientStops[1].Color;
-
-            double x = e.GetCurrentPoint(line).Position.X;
-            //double y = e.GetCurrentPoint(line).Position.Y;
-
-            double percentage = 1.0 - x / line.ActualWidth;
-
-            RGB rgb = RGB.GetBlendedColor(percentage, colorStart, colorEnd);
-
-            ellipse.Fill = rgb.CreateSolidColorBrush();
-
-            //MoveColorCircle(rgb);
-            Debug.WriteLine($"RGB: {rgb.R}, {rgb.G}, {rgb.B}");
-            //HSV hsv = RGBToHSV(new RGB(brush.Color.R, brush.Color.G, brush.Color.B));
-            //Debug.WriteLine($"{hsv.H}, {hsv.S}, {hsv.V}");
-            */
-
-            //Grid grid = this.FindName("Wheel") as Grid;
-            Ellipse ellipse = this.FindName("WheelCircle") as Ellipse;
-
-            //Line line = sender as Line;
+            Ellipse ellipse = this.FindName("ColorWheelCircle") as Ellipse;
 
             LinearGradientBrush linearGradientBrush = line.Stroke as LinearGradientBrush;
 
@@ -221,37 +196,60 @@ namespace Hashboard
                 pointFromParent.Y - marginFromParent.Top / 2,
                 0, 0);
 
-            StackPanel root = this.FindName("RootPanel") as StackPanel;
-            root.Background = rgb.CreateSolidColorBrush();
+            //StackPanel root = this.FindName("RootPanel") as StackPanel;
+            //root.Background = rgb.CreateSolidColorBrush();
         }
 
-        private void UpdateBrightness(byte brightness)
+        /// <summary>
+        /// Updates the Brightness slider.
+        /// </summary>
+        /// <param name="brightness"></param>
+        private void UpdateBrightness(double brightness)
         {
             Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
             Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
+            Grid grid = this.FindName("BrightnessRoot") as Grid;
 
-            double percentage = 1.0 - (double)brightness / 255.0;
-            
+            brightness = Math.Max(brightness, 0.0);
+            brightness = Math.Min(brightness, 255.0);
+
+            double percentage = 1.0 - brightness / 255.0;
+            double offset = (grid.Width - rectangle.Width) / 2 - (ellipse.Width / 2);
+
             ellipse.Fill = RGB.GetBlendedColor(percentage, Colors.DarkSlateGray, Colors.LightGray).CreateSolidColorBrush();
-            ellipse.Margin = new Thickness((1.0 - percentage) * rectangle.Width - ellipse.Width / 2, 0, 0, 0);
+            ellipse.Margin = new Thickness(
+                (1.0 - percentage) * rectangle.Width + offset, 0, 0, 0);
         }
 
+        /// <summary>
+        /// Updates the ColorTemperature slider.
+        /// </summary>
+        /// <param name="colorTemperature"></param>
+        /// <param name="maxColorTemperature"></param>
+        /// <param name="minColorTemperature"></param>
         private void UpdateColorTemperature(int colorTemperature, int maxColorTemperature, int minColorTemperature)
         {
             Ellipse ellipse = this.FindName("ColorTemperatureCircle") as Ellipse;
             Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
+            Grid grid = this.FindName("ColorTemperatureRoot") as Grid;
 
             colorTemperature = Math.Min(colorTemperature, maxColorTemperature);
             colorTemperature = Math.Max(colorTemperature, minColorTemperature);
 
             double percentage = (double)(colorTemperature - minColorTemperature) / (double)(maxColorTemperature - minColorTemperature);
+            double offset = (grid.Width - rectangle.Width) / 2 - (ellipse.Width / 2);
 
             ellipse.Fill = RGB.GetBlendedColor(percentage, Colors.Gold, Colors.LightCyan).CreateSolidColorBrush();
-            ellipse.Margin = new Thickness((1.0 - percentage) * rectangle.Width - ellipse.Width / 2, 0, 0, 0);
+            ellipse.Margin = new Thickness(
+                (1.0 - percentage) * rectangle.Width + offset, 0, 0, 0);
         }
 
-
-        private void BitmapIcon_Tapped(object sender, TappedRoutedEventArgs e)
+        /// <summary>
+        /// Toggles the Power Button.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void PowerButton_Tapped(object sender, TappedRoutedEventArgs e)
         {
             BitmapIcon bitmapIcon = sender as BitmapIcon;
 
@@ -259,79 +257,258 @@ namespace Hashboard
             WebRequests.SendAction(PanelEntity.EntityId, "toggle");
         }
 
-        private void ButtonPrevious_PointerPressed(object sender, PointerRoutedEventArgs e)
+        private void PowerButton_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
             BitmapIcon bitmapIcon = sender as BitmapIcon;
             bitmapIcon.Foreground = new SolidColorBrush(Colors.DarkGray);
         }
-        private void ButtonPrevious_PointerExited(object sender, PointerRoutedEventArgs e)
+        private void PowerButton_PointerExited(object sender, PointerRoutedEventArgs e)
         {
             BitmapIcon bitmapIcon = sender as BitmapIcon;
             bitmapIcon.Foreground = new SolidColorBrush(Colors.White);
         }
 
+        /// <summary>
+        /// Moves the Color Wheel circle to the selected location and sets the Fill color.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ColorWheelLine_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
             if (e.Pointer.IsInContact)
             {
-                Grid grid = this.FindName("Wheel") as Grid;
+                Grid grid = this.FindName("ColorWheel") as Grid;
 
                 PointerPoint pointerPointFromLine = e.GetCurrentPoint(sender as UIElement);
                 PointerPoint pointerPointFromParent = e.GetCurrentPoint(grid as UIElement);
                 
-                MoveColorCircleToLineAndSetColor(sender as Line, pointerPointFromLine.Position, pointerPointFromParent.Position, grid.Margin);
+                UpdateColorWheel(sender as Line, pointerPointFromLine.Position, pointerPointFromParent.Position, grid.Margin);
             }
         }
 
+        /// <summary>
+        /// Moves the Color Wheel circle to the selected location and sets the Fill color.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ColorWheelLine_Tapped(object sender, TappedRoutedEventArgs e)
         {
-            Grid grid = this.FindName("Wheel") as Grid;
+            Grid grid = this.FindName("ColorWheel") as Grid;
 
             Point pointFromLine = e.GetPosition(sender as UIElement);
             Point pointFromGrid = e.GetPosition(grid as UIElement);
 
-            MoveColorCircleToLineAndSetColor(sender as Line, pointFromLine, pointFromGrid, grid.Margin);
-
+            UpdateColorWheel(sender as Line, pointFromLine, pointFromGrid, grid.Margin);
         }
 
-        private void ColorWheelLine_PointerPressed(object sender, PointerRoutedEventArgs e)
+        /// <summary>
+        /// Hides the Color Wheel circle.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ColorWheelGrid_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            //Ellipse ellipse = this.FindName("WheelCircle") as Ellipse;
-            //ellipse.Visibility = Visibility.Collapsed;
+            ShowColorWheelCircle(Visibility.Collapsed);
         }
 
-        private void ColorWheelLine_PointerReleased(object sender, PointerRoutedEventArgs e)
+        /// <summary>
+        /// Shows the Color Wheel circleand hides the Color Temperature circle.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ColorWheelGrid_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            //Grid grid = this.FindName("Wheel") as Grid;
-
-
-            //Ellipse ellipse = this.FindName("WheelCircle") as Ellipse;
-            //ellipse.Visibility = Visibility.Visible;
-
-            //ellipse.Margin = new Thickness(
-            //    e.GetCurrentPoint(grid as UIElement).Position.X - grid.Margin.Left / 2,
-            //    e.GetCurrentPoint(grid as UIElement).Position.Y - grid.Margin.Top / 2,
-            //    0, 0);
+            ShowColorWheelCircle(Visibility.Visible);
         }
 
-        private void Grid_PointerPressed(object sender, PointerRoutedEventArgs e)
-        {
-            Ellipse ellipse = this.FindName("WheelCircle") as Ellipse;
-            ellipse.Visibility = Visibility.Collapsed;
-        }
-
-        private void Grid_PointerReleased(object sender, PointerRoutedEventArgs e)
-        {
-            Ellipse ellipse = this.FindName("WheelCircle") as Ellipse;
-            ellipse.Visibility = Visibility.Visible;
-        }
-
-        private void Grid_PointerExited(object sender, PointerRoutedEventArgs e)
+        /// <summary>
+        /// Shows the Color Wheel circle and hides the Color Temperature circle.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ColorWheelGrid_PointerExited(object sender, PointerRoutedEventArgs e)
         {
             if (e.Pointer.IsInContact)
             {
-                Ellipse ellipse = this.FindName("WheelCircle") as Ellipse;
+                ShowColorWheelCircle(Visibility.Visible);
+            }
+        }
+
+        private void ColorTemperature_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            ShowColorTemperatureCircle(Visibility.Visible);
+
+            Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
+            double percentage = 1.0 - e.GetPosition(rectangle).X / rectangle.Width;
+  
+            SetColorTemperature(percentage);
+        }
+
+        private void ColorTemperature_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            ShowColorTemperatureCircle(Visibility.Collapsed);
+        }
+
+        private void ColorTemperature_PointerReleased(object sender, PointerRoutedEventArgs e)
+        {
+            ShowColorTemperatureCircle(Visibility.Visible);
+        }
+
+        private void ColorTemperature_PointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            if (e.Pointer.IsInContact)
+            {
+                Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
+                double percentage = 1.0 - e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
+
+                SetColorTemperature(percentage);
+            }
+        }
+
+        private void ColorTemperature_PointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            if (e.Pointer.IsInContact)
+            {
+                Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
+                double percentage = 1.0 - e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
+
+                SetColorTemperature(percentage);
+
+                ShowColorTemperatureCircle(Visibility.Visible);
+            }
+        }
+
+        private void SetColorTemperature(double percentage)
+        {
+            int minTemperature = Convert.ToInt32(PanelEntity.Attributes["min_mireds"]);
+            int maxTemperature = Convert.ToInt32(PanelEntity.Attributes["max_mireds"]);
+            int temperature = Convert.ToInt32((maxTemperature - minTemperature) * percentage + minTemperature);
+
+            UpdateColorTemperature(temperature, maxTemperature, minTemperature);
+        }
+
+        private void ShowColorTemperatureCircle(Visibility visibility)
+        {
+            if (visibility == Visibility.Collapsed)
+            {
+                Ellipse colorWheelEllipse = this.FindName("ColorTemperatureCircle") as Ellipse;
+                colorWheelEllipse.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                Ellipse colorWheelEllipse = this.FindName("ColorWheelCircle") as Ellipse;
+                colorWheelEllipse.Visibility = Visibility.Collapsed;
+
+                Ellipse colorTemperatureEllipse = this.FindName("ColorTemperatureCircle") as Ellipse;
+                colorTemperatureEllipse.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void ShowColorWheelCircle(Visibility visibility)
+        {
+            if (visibility == Visibility.Collapsed)
+            {
+                Ellipse colorTemperatureEllipse = this.FindName("ColorWheelCircle") as Ellipse;
+                colorTemperatureEllipse.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                Ellipse colorWheelEllipse = this.FindName("ColorWheelCircle") as Ellipse;
+                colorWheelEllipse.Visibility = Visibility.Visible;
+
+                Ellipse colorTemperatureEllipse = this.FindName("ColorTemperatureCircle") as Ellipse;
+                colorTemperatureEllipse.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void ColorTemperatureCircle_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            if (e.Pointer.IsInContact)
+            {
+                ShowColorTemperatureCircle(Visibility.Collapsed);
+            }
+        }
+
+        private void ColorTemperatureCircle_PointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            if (e.Pointer.IsInContact)
+            {
+                ShowColorTemperatureCircle(Visibility.Collapsed);
+            }
+        }
+
+        /// <summary>
+        /// Brightness
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Brightness_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
+            ellipse.Visibility = Visibility.Visible;
+
+            Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
+            double percentage = e.GetPosition(rectangle).X / rectangle.Width;
+
+            UpdateBrightness(255 * percentage);
+        }
+
+        private void Brightness_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
+            ellipse.Visibility = Visibility.Collapsed;
+
+        }
+
+        private void Brightness_PointerReleased(object sender, PointerRoutedEventArgs e)
+        {
+            Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
+            ellipse.Visibility = Visibility.Visible;
+        }
+
+        private void Brightness_PointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            if (e.Pointer.IsInContact)
+            {
+                Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
+                ellipse.Visibility = Visibility.Collapsed;
+
+                Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
+                double percentage = e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
+
+                UpdateBrightness(255 * percentage);
+            }
+        }
+
+        private void Brightness_PointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            if (e.Pointer.IsInContact)
+            {
+                Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
                 ellipse.Visibility = Visibility.Visible;
+
+                Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
+                double percentage = e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
+
+                UpdateBrightness(255 * percentage);
+            }
+        }
+
+        private void BrightnessCircle_PointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            if (e.Pointer.IsInContact)
+            {
+                Ellipse ellipse = sender as Ellipse;
+                ellipse.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void BrightnessCircle_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            if (e.Pointer.IsInContact)
+            {
+                Ellipse ellipse = sender as Ellipse;
+                ellipse.Visibility = Visibility.Collapsed;
             }
         }
 
