@@ -37,18 +37,39 @@ namespace HashBoard
             WebRequests.SendData(MainPage.hostname, entityId.Split('.')[0], action, MainPage.apiPassword, json);
         }
 
-        public static void SendAction(string domain, string action, Dictionary<string, string> data)
-        {
-            string json = "{" + string.Join(',', data.Select(x => "\"" + x.Key + "\":\"" + x.Value + "\"")) + "}";
-
-            WebRequests.SendData(MainPage.hostname, domain, action, MainPage.apiPassword, json);
-        }
-
-        public static void SendAction(IEnumerable<string> entityIds, string action)
+        public static void SendAction(string action, IEnumerable<string> entityIds)
         {
             string json = "{\"entity_id\":[" + string.Join(',', entityIds.Select(x => "\"" + x + "\"").ToList()) + "]}";
 
             WebRequests.SendData(MainPage.hostname, entityIds.First().Split('.')[0], action, MainPage.apiPassword, json);
+        }
+
+        public static void SendAction(string domain, string action, Dictionary<string, string> data)
+        {
+            string json = "{" + ParseDictionaryToJson(data) + "}";
+
+            WebRequests.SendData(MainPage.hostname, domain, action, MainPage.apiPassword, json);
+        }
+
+        public static void SendAction(string action, IEnumerable<string> entityIds, Dictionary<string, string> data)
+        {
+            string json = "{\"entity_id\":[" + string.Join(',', entityIds.Select(x => "\"" + x + "\"").ToList()) + "],";
+            //json += string.Join(",", data.Select(x => "\"" + x.Key + "\":\"" + x.Value + "\"").ToList()) + "}";
+            json += ParseDictionaryToJson(data) + "}";
+
+            WebRequests.SendData(MainPage.hostname, entityIds.First().Split('.')[0], action, MainPage.apiPassword, json);
+        }
+
+        private static string ParseDictionaryToJson(Dictionary<string, string> data)
+        {
+            return string.Join(',',
+                data.Select(x =>
+                    double.TryParse(x.Value, out double integerValue) ?
+                        ("\"" + x.Key + "\":" + x.Value) :          // No quotes around numeric data values
+                        x.Value.Contains('[') ?
+                            ("\"" + x.Key + "\":" + x.Value) :      // Arrays are provided custom by caller so don't add quotes
+                    ("\"" + x.Key + "\":\"" + x.Value + "\"")       // Normal case is strings which will need quotes added
+                ));
         }
 
         private static void SendData(string hostname, string domain, string action, string apiPassword, string data)

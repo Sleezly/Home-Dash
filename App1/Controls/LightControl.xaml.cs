@@ -1,5 +1,6 @@
 ﻿using HashBoard;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Windows.Foundation;
 using Windows.System.Threading;
@@ -11,18 +12,26 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Shapes;
+using System.Linq;
 
 namespace Hashboard
 {
     public partial class LightControl : UserControl
     {
+        private const int MinimumColorTemperature = 154;
+
+        private const int MaximumColorTemperature = 500;
+
         private Entity PanelEntity;
 
-        public LightControl(Entity entity)
+        private IEnumerable<Entity> ChildrenEntities;
+
+        public LightControl(Entity entity, IEnumerable<Entity> childrenEntities)
         {
             this.InitializeComponent();
 
             PanelEntity = entity;
+            ChildrenEntities = childrenEntities;
 
             DrawColorWheel();
 
@@ -97,48 +106,103 @@ namespace Hashboard
                 textBlock.Text = PanelEntity.Attributes["friendly_name"];
             }
 
-            if (PanelEntity.Attributes.ContainsKey("brightness"))
+            // Check for groups
+            if (ChildrenEntities != null)
             {
-                UpdateBrightness(Convert.ToDouble(PanelEntity.Attributes["brightness"]));
-            }
-            else
-            {
-                Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
-                ellipse.Visibility = Visibility.Collapsed;
-            }
+                IEnumerable<Entity> onEntities = ChildrenEntities.Where(x => string.Equals(x.State, "on", StringComparison.InvariantCultureIgnoreCase));
 
-            if (PanelEntity.Attributes.ContainsKey("color_temp"))
-            {
-                UpdateColorTemperature(
-                    Convert.ToInt32(PanelEntity.Attributes["color_temp"]),
-                    Convert.ToInt32(PanelEntity.Attributes["max_mireds"]),
-                    Convert.ToInt32(PanelEntity.Attributes["min_mireds"]));
-
-                ShowColorTemperatureCircle(Visibility.Visible);
-            }
-            else
-            {
-                ShowColorTemperatureCircle(Visibility.Collapsed);
-            }
-
-            if (PanelEntity.Attributes.ContainsKey("rgb_color"))
-            {
-                Newtonsoft.Json.Linq.JArray rgbColors = PanelEntity.Attributes["rgb_color"];
-
-                RGB rgb = new RGB()
+                if (onEntities.Any())
                 {
-                    R = Convert.ToByte(rgbColors[0]),
-                    G = Convert.ToByte(rgbColors[1]),
-                    B = Convert.ToByte(rgbColors[2]),
-                };
+                    // Average the brightness 
+                    double averageBrightness = onEntities.Select(x => Convert.ToDouble(x.Attributes["brightness"])).Cast<double>().Average();
+                    UpdateBrightnessControl(averageBrightness);
 
-                SetColorCircleLocationAndColor(rgb);
+                    // Average the color temperature
+                    IEnumerable<Entity> colorTempEntities = onEntities.Where(x => x.Attributes.ContainsKey("color_temp"));
 
-                ShowColorWheelCircle(Visibility.Visible);
+                    if (colorTempEntities.Any())
+                    {
+                        double averageColorTemperature = colorTempEntities.Select(x => Convert.ToDouble(x.Attributes["color_temp"])).Cast<double>().Average();
+
+                        UpdateColorTemperatureControl(Convert.ToInt32(averageColorTemperature));
+
+                        ShowColorTemperatureCircle(Visibility.Visible);
+                    }
+                    else
+                    {
+                        ShowColorTemperatureCircle(Visibility.Collapsed);
+                    }
+
+                    // Average the color
+                    IEnumerable<Entity> rgbEntities = onEntities.Where(x => x.Attributes.ContainsKey("rgb_color"));
+
+                    if (rgbEntities.Any())
+                    {
+                        RGB averageColor = RGB.Average(rgbEntities.Select(x => new RGB(
+                            Convert.ToByte(x.Attributes["rgb_color"][0]),
+                            Convert.ToByte(x.Attributes["rgb_color"][1]),
+                            Convert.ToByte(x.Attributes["rgb_color"][2]))).Cast<RGB>());
+
+                        SetColorCircleLocationAndColor(averageColor);
+
+                        ShowColorWheelCircle(Visibility.Visible);
+                    }
+                    else
+                    {
+                        ShowColorWheelCircle(Visibility.Collapsed);
+                    }
+                }
+                else
+                {
+                    Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
+                    ellipse.Visibility = Visibility.Collapsed;
+
+                    ShowColorTemperatureCircle(Visibility.Collapsed);
+                    ShowColorWheelCircle(Visibility.Collapsed);
+                }
             }
             else
             {
-                ShowColorWheelCircle(Visibility.Collapsed);
+                if (PanelEntity.Attributes.ContainsKey("brightness"))
+                {
+                    UpdateBrightnessControl(Convert.ToDouble(PanelEntity.Attributes["brightness"]));
+                }
+                else
+                {
+                    Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
+                    ellipse.Visibility = Visibility.Collapsed;
+                }
+
+                if (PanelEntity.Attributes.ContainsKey("color_temp"))
+                {
+                    UpdateColorTemperatureControl(Convert.ToInt32(PanelEntity.Attributes["color_temp"]));
+
+                    ShowColorTemperatureCircle(Visibility.Visible);
+                }
+                else
+                {
+                    ShowColorTemperatureCircle(Visibility.Collapsed);
+                }
+
+                if (PanelEntity.Attributes.ContainsKey("rgb_color"))
+                {
+                    Newtonsoft.Json.Linq.JArray rgbColors = PanelEntity.Attributes["rgb_color"];
+
+                    RGB rgb = new RGB()
+                    {
+                        R = Convert.ToByte(rgbColors[0]),
+                        G = Convert.ToByte(rgbColors[1]),
+                        B = Convert.ToByte(rgbColors[2]),
+                    };
+
+                    SetColorCircleLocationAndColor(rgb);
+
+                    ShowColorWheelCircle(Visibility.Visible);
+                }
+                else
+                {
+                    ShowColorWheelCircle(Visibility.Collapsed);
+                }
             }
         }
 
@@ -196,15 +260,95 @@ namespace Hashboard
                 pointFromParent.Y - marginFromParent.Top / 2,
                 0, 0);
 
-            //StackPanel root = this.FindName("RootPanel") as StackPanel;
-            //root.Background = rgb.CreateSolidColorBrush();
+            SendColorUpdate(rgb);
+        }
+
+        /// <summary>
+        /// Sends a web request with desired new brightness value.
+        /// </summary>
+        /// <param name="brightness"></param>
+        private void SendBrightnessUpdate(double brightness)
+        {
+            if (ChildrenEntities != null)
+            {
+                WebRequests.SendAction(
+                    "turn_on",
+                    ChildrenEntities.Select(x => x.EntityId),
+                    new Dictionary<string, string>() {
+                        { "brightness", Convert.ToInt32(brightness).ToString() }
+                    });
+            }
+            else
+            {
+                WebRequests.SendAction(
+                    "light",
+                    "turn_on",
+                    new Dictionary<string, string>() {
+                        { "entity_id", PanelEntity.EntityId.ToString() },
+                        { "brightness", Convert.ToInt32(brightness).ToString() },
+                    });
+            }
+        }
+
+        /// <summary>
+        /// Sends a web request with desired new color temperature value.
+        /// </summary>
+        /// <param name="colorTemperature"></param>
+        private void SendColorTemperatureUpdate(int colorTemperature)
+        {
+            if (ChildrenEntities != null)
+            {
+                WebRequests.SendAction(
+                    "turn_on",
+                    ChildrenEntities.Select(x => x.EntityId),
+                    new Dictionary<string, string>() {
+                        { "color_temp", Convert.ToInt32(colorTemperature).ToString() }
+                    });
+            }
+            else
+            {
+                WebRequests.SendAction(
+                    "light",
+                    "turn_on",
+                    new Dictionary<string, string>() {
+                        { "entity_id", PanelEntity.EntityId.ToString() },
+                        { "color_temp", Convert.ToInt32(colorTemperature).ToString() },
+                    });
+            }
+        }
+
+        /// <summary>
+        /// Sends a web request with desired new RGB color value.
+        /// </summary>
+        /// <param name="RGB"></param>
+        private void SendColorUpdate(RGB rgb)
+        {
+            if (ChildrenEntities != null)
+            {
+                WebRequests.SendAction(
+                    "turn_on",
+                    ChildrenEntities.Select(x => x.EntityId),
+                    new Dictionary<string, string>() {
+                        { "rgb_color", $"[{rgb.R},{rgb.G},{rgb.B}]" }
+                    });
+            }
+            else
+            {
+                WebRequests.SendAction(
+                    "light",
+                    "turn_on",
+                    new Dictionary<string, string>() {
+                        { "entity_id", PanelEntity.EntityId.ToString() },
+                        { "rgb_color", $"[{rgb.R},{rgb.G},{rgb.B}]" }
+                    });
+            }
         }
 
         /// <summary>
         /// Updates the Brightness slider.
         /// </summary>
         /// <param name="brightness"></param>
-        private void UpdateBrightness(double brightness)
+        private void UpdateBrightnessControl(double brightness)
         {
             Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
             Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
@@ -227,16 +371,16 @@ namespace Hashboard
         /// <param name="colorTemperature"></param>
         /// <param name="maxColorTemperature"></param>
         /// <param name="minColorTemperature"></param>
-        private void UpdateColorTemperature(int colorTemperature, int maxColorTemperature, int minColorTemperature)
+        private void UpdateColorTemperatureControl(int colorTemperature)
         {
             Ellipse ellipse = this.FindName("ColorTemperatureCircle") as Ellipse;
             Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
             Grid grid = this.FindName("ColorTemperatureRoot") as Grid;
 
-            colorTemperature = Math.Min(colorTemperature, maxColorTemperature);
-            colorTemperature = Math.Max(colorTemperature, minColorTemperature);
+            colorTemperature = Math.Min(colorTemperature, MaximumColorTemperature);
+            colorTemperature = Math.Max(colorTemperature, MinimumColorTemperature);
 
-            double percentage = (double)(colorTemperature - minColorTemperature) / (double)(maxColorTemperature - minColorTemperature);
+            double percentage = (double)(colorTemperature - MinimumColorTemperature) / (double)(MaximumColorTemperature - MinimumColorTemperature);
             double offset = (grid.Width - rectangle.Width) / 2 - (ellipse.Width / 2);
 
             ellipse.Fill = RGB.GetBlendedColor(percentage, Colors.Gold, Colors.LightCyan).CreateSolidColorBrush();
@@ -245,7 +389,7 @@ namespace Hashboard
         }
 
         /// <summary>
-        /// Toggles the Power Button.
+        /// Toggles the Power Button
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -254,7 +398,15 @@ namespace Hashboard
             BitmapIcon bitmapIcon = sender as BitmapIcon;
 
             bitmapIcon.Foreground = new SolidColorBrush(Colors.White);
-            WebRequests.SendAction(PanelEntity.EntityId, "toggle");
+
+            if (ChildrenEntities != null)
+            {
+                WebRequests.SendAction("toggle", ChildrenEntities.Select(x => x.EntityId));
+            }
+            else
+            {
+                WebRequests.SendAction(PanelEntity.EntityId, "toggle");
+            }
         }
 
         private void PowerButton_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -266,6 +418,48 @@ namespace Hashboard
         {
             BitmapIcon bitmapIcon = sender as BitmapIcon;
             bitmapIcon.Foreground = new SolidColorBrush(Colors.White);
+        }
+
+        /// <summary>
+        /// Shows a circle over the color temperature slider.
+        /// </summary>
+        /// <param name="visibility"></param>
+        private void ShowColorTemperatureCircle(Visibility visibility)
+        {
+            if (visibility == Visibility.Collapsed)
+            {
+                Ellipse colorWheelEllipse = this.FindName("ColorTemperatureCircle") as Ellipse;
+                colorWheelEllipse.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                Ellipse colorWheelEllipse = this.FindName("ColorWheelCircle") as Ellipse;
+                colorWheelEllipse.Visibility = Visibility.Collapsed;
+
+                Ellipse colorTemperatureEllipse = this.FindName("ColorTemperatureCircle") as Ellipse;
+                colorTemperatureEllipse.Visibility = Visibility.Visible;
+            }
+        }
+
+        /// <summary>
+        /// Shows a circle over the Color Wheel.
+        /// </summary>
+        /// <param name="visibility"></param>
+        private void ShowColorWheelCircle(Visibility visibility)
+        {
+            if (visibility == Visibility.Collapsed)
+            {
+                Ellipse colorTemperatureEllipse = this.FindName("ColorWheelCircle") as Ellipse;
+                colorTemperatureEllipse.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                Ellipse colorWheelEllipse = this.FindName("ColorWheelCircle") as Ellipse;
+                colorWheelEllipse.Visibility = Visibility.Visible;
+
+                Ellipse colorTemperatureEllipse = this.FindName("ColorTemperatureCircle") as Ellipse;
+                colorTemperatureEllipse.Visibility = Visibility.Collapsed;
+            }
         }
 
         /// <summary>
@@ -380,45 +574,11 @@ namespace Hashboard
 
         private void SetColorTemperature(double percentage)
         {
-            int minTemperature = Convert.ToInt32(PanelEntity.Attributes["min_mireds"]);
-            int maxTemperature = Convert.ToInt32(PanelEntity.Attributes["max_mireds"]);
-            int temperature = Convert.ToInt32((maxTemperature - minTemperature) * percentage + minTemperature);
+            int temperature = Convert.ToInt32((MaximumColorTemperature - MinimumColorTemperature) * percentage + MinimumColorTemperature);
 
-            UpdateColorTemperature(temperature, maxTemperature, minTemperature);
-        }
+            UpdateColorTemperatureControl(temperature);
 
-        private void ShowColorTemperatureCircle(Visibility visibility)
-        {
-            if (visibility == Visibility.Collapsed)
-            {
-                Ellipse colorWheelEllipse = this.FindName("ColorTemperatureCircle") as Ellipse;
-                colorWheelEllipse.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                Ellipse colorWheelEllipse = this.FindName("ColorWheelCircle") as Ellipse;
-                colorWheelEllipse.Visibility = Visibility.Collapsed;
-
-                Ellipse colorTemperatureEllipse = this.FindName("ColorTemperatureCircle") as Ellipse;
-                colorTemperatureEllipse.Visibility = Visibility.Visible;
-            }
-        }
-
-        private void ShowColorWheelCircle(Visibility visibility)
-        {
-            if (visibility == Visibility.Collapsed)
-            {
-                Ellipse colorTemperatureEllipse = this.FindName("ColorWheelCircle") as Ellipse;
-                colorTemperatureEllipse.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                Ellipse colorWheelEllipse = this.FindName("ColorWheelCircle") as Ellipse;
-                colorWheelEllipse.Visibility = Visibility.Visible;
-
-                Ellipse colorTemperatureEllipse = this.FindName("ColorTemperatureCircle") as Ellipse;
-                colorTemperatureEllipse.Visibility = Visibility.Collapsed;
-            }
+            SendColorTemperatureUpdate(temperature);
         }
 
         private void ColorTemperatureCircle_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -440,8 +600,6 @@ namespace Hashboard
         /// <summary>
         /// Brightness
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         private void Brightness_Tapped(object sender, TappedRoutedEventArgs e)
         {
             Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
@@ -450,7 +608,9 @@ namespace Hashboard
             Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
             double percentage = e.GetPosition(rectangle).X / rectangle.Width;
 
-            UpdateBrightness(255 * percentage);
+            UpdateBrightnessControl(255 * percentage);
+
+            SendBrightnessUpdate(255 * percentage);
         }
 
         private void Brightness_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -476,7 +636,9 @@ namespace Hashboard
                 Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
                 double percentage = e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
 
-                UpdateBrightness(255 * percentage);
+                UpdateBrightnessControl(255 * percentage);
+
+                SendBrightnessUpdate(255 * percentage);
             }
         }
 
@@ -490,7 +652,9 @@ namespace Hashboard
                 Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
                 double percentage = e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
 
-                UpdateBrightness(255 * percentage);
+                UpdateBrightnessControl(255 * percentage);
+
+                SendBrightnessUpdate(255 * percentage);
             }
         }
 
@@ -511,41 +675,5 @@ namespace Hashboard
                 ellipse.Visibility = Visibility.Collapsed;
             }
         }
-
-        //private Color GetPixel(byte[] pixels, int x, int y, uint width, uint height)
-        //{
-        //    int i = x;
-        //    int j = y;
-        //    int k = (i * (int)width + j) * 3;
-        //    var r = pixels[k + 0];
-        //    var g = pixels[k + 1];
-        //    var b = pixels[k + 2];
-        //    return Color.FromArgb(255, r, g, b);
-        //}
-
-        //private System.Drawing.Point GetColorWheelCirclePoint(RGB rgb)
-        //{
-        //    if (ColorWheelPixelData != null)
-        //    {
-        //        for (int x = 0; x < ColorWheelBitmapDecoder.PixelWidth; x++)
-        //        {
-        //            for (int y = 0; y < ColorWheelBitmapDecoder.PixelHeight; y++)
-        //            {
-        //                Color color = GetPixel(ColorWheelPixelData, x, y, ColorWheelBitmapDecoder.PixelWidth, ColorWheelBitmapDecoder.PixelHeight);
-        //                if (rgb.Equals(color, 5))
-        //                {
-        //                    //Ellipse ellipse = this.FindName("WheelCircle") as Ellipse;
-        //                    //ellipse.Fill = new SolidColorBrush(Color.FromArgb(255, color.R, color.G, color.B));
-        //                    Debug.WriteLine($"{x},{y}");
-
-        //                    return new System.Drawing.Point(x, y);
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //    return new System.Drawing.Point();
-        //}
-
     }
 }

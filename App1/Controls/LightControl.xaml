@@ -7,11 +7,11 @@
 
     <StackPanel x:Name="RootPanel" Orientation="Vertical" Background="Black" Padding="4">
         <TextBlock x:Name="DeviceText" HorizontalAlignment="Center" Text="DeviceText" Foreground="White" FontSize="24"/>
-        <Grid Background="DarkGray" PointerPressed="ColorWheelGrid_PointerPressed" PointerReleased="ColorWheelGrid_PointerReleased" PointerExited="ColorWheelGrid_PointerExited">
+        <Grid PointerPressed="ColorWheelGrid_PointerPressed" PointerReleased="ColorWheelGrid_PointerReleased" PointerExited="ColorWheelGrid_PointerExited">
             <Grid x:Name="ColorWheel" Margin="0,12,0,12" Width="280" Height="280"/>
             <Ellipse x:Name="ColorWheelCircle" Width="24" Height="24" Stroke="White" Fill="Transparent" StrokeThickness="2" HorizontalAlignment="Left" VerticalAlignment="Top"/>
         </Grid>
-        <Grid x:Name="ColorTemperatureRoot" Width="300" Height="38" Background="Green" Tapped="ColorTemperature_Tapped" PointerPressed="ColorTemperature_PointerPressed" PointerReleased="ColorTemperature_PointerReleased" PointerMoved="ColorTemperature_PointerMoved" PointerExited="ColorTemperature_PointerExited">
+        <Grid x:Name="ColorTemperatureRoot" Width="300" Height="38" Tapped="ColorTemperature_Tapped" PointerPressed="ColorTemperature_PointerPressed" PointerReleased="ColorTemperature_PointerReleased" PointerMoved="ColorTemperature_PointerMoved" PointerExited="ColorTemperature_PointerExited">
             <Rectangle x:Name="ColorTemperature" HorizontalAlignment="Center" Width="240" Height="12" Stroke="White">
                 <Rectangle.Fill>
                     <LinearGradientBrush>
@@ -25,7 +25,7 @@
             <Ellipse x:Name="ColorTemperatureCircle" Width="24" Height="24" Stroke="White" StrokeThickness="2" HorizontalAlignment="Left" PointerPressed="ColorTemperatureCircle_PointerPressed" PointerMoved="ColorTemperatureCircle_PointerMoved"/>
         </Grid>
         <TextBlock HorizontalAlignment="Left" Foreground="White" Margin="24,0,0,12">Color Temperature</TextBlock>
-        <Grid x:Name="BrightnessRoot" Width="300" Height="38" Background="Brown" Tapped="Brightness_Tapped"  PointerPressed="Brightness_PointerPressed"  PointerReleased="Brightness_PointerReleased"  PointerMoved="Brightness_PointerMoved"  PointerExited="Brightness_PointerExited">
+        <Grid x:Name="BrightnessRoot" Width="300" Height="38" Tapped="Brightness_Tapped"  PointerPressed="Brightness_PointerPressed"  PointerReleased="Brightness_PointerReleased"  PointerMoved="Brightness_PointerMoved"  PointerExited="Brightness_PointerExited">
             <Rectangle x:Name="BrightnessRectangle" HorizontalAlignment="Center" Width="240" Height="12" Stroke="White">
                 <Rectangle.Fill>
                     <LinearGradientBrush>

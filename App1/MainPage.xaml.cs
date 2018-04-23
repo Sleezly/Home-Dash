@@ -51,8 +51,6 @@ namespace HashBoard
 
         private void LoadEntityHandler()
         {
-
-
             CustomEntities = new List<PanelBuilderBase>()
             {
                 new DateTimePanelBuilder() {
@@ -113,10 +111,23 @@ namespace HashBoard
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
 
+                new GenericPanelBuilder() {
+                    EntityIdStartsWith = "automation.",
+                    TapEventAction = "activate",
+                    TapEventHandler = PanelElement_Tapped,
+                    HoldEventHandler = PanelElement_Holding,
+                    PressedEventHandler = PanelElement_PointerPressed,
+                    ReleasedEventHandler = PanelElement_PointerExited},
+
                 new GenericPanelBuilder() { EntityIdStartsWith = string.Empty },
             };
         }
 
+        /// <summary>
+        /// Show the PopUp custom UI.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void PanelElement_Holding(object sender, HoldingRoutedEventArgs e)
         {
             if (e == null || e.HoldingState == Windows.UI.Input.HoldingState.Completed)
@@ -130,7 +141,7 @@ namespace HashBoard
                     switch (panelData.PopupUserControl)
                     {
                         case nameof(Hashboard.LightControl):
-                            popupContent = new Hashboard.LightControl(panelData.Entity);
+                            popupContent = new Hashboard.LightControl(panelData.Entity, panelData.ChildrenEntities);
                             break;
 
                         case nameof(Hashboard.MediaControl):
@@ -203,19 +214,29 @@ namespace HashBoard
         {
             if (panelData.ChildrenEntities != null)
             {
-                WebRequests.SendAction(
-                    panelData.ChildrenEntities.Select(x => x.EntityId), 
-                    panelData.ServiceToInvokeOnTap);
+                WebRequests.SendAction(panelData.ServiceToInvokeOnTap, panelData.ChildrenEntities.Select(x => x.EntityId));
+
+                // Toggle the state of the root and children entities
+                panelData.Entity.State = GetToggledState(panelData.Entity);
+                panelData.Entity.LastUpdated = DateTime.Now;
+
+                foreach (Entity child in panelData.ChildrenEntities)
+                {
+                    child.State = GetToggledState(child);
+                    child.LastUpdated = DateTime.Now;
+                }
+
+                UpdateChildPanelIfneeded((FrameworkElement)this.Content, panelData.ChildrenEntities.Union(new List<Entity> { panelData.Entity } ));
             }
             else
             {
                 WebRequests.SendAction(panelData.Entity.EntityId, panelData.ServiceToInvokeOnTap);
+
+                panelData.Entity.State = GetToggledState(panelData.Entity);
+                panelData.Entity.LastUpdated = DateTime.Now;
+
+                UpdateChildPanelIfneeded(panel, new List<Entity>() { panelData.Entity });
             }
-
-            panelData.Entity.State = GetToggledState(panelData.Entity);
-            panelData.Entity.LastUpdated = DateTime.Now;
-
-            UpdateChildPanelIfneeded(panel, new List<Entity>() { panelData.Entity });
         }
 
         private void PanelElement_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -313,37 +334,40 @@ namespace HashBoard
         /// </summary>
         /// <param name="element"></param>
         /// <param name="allEntities"></param>
-        private void UpdateChildPanelIfneeded(FrameworkElement element, List<Entity> allEntities)
+        private void UpdateChildPanelIfneeded(FrameworkElement element, IEnumerable<Entity> allEntities)
         {
             PanelData panelData = PanelData.GetPanelData(element);
             
-            // Update this control
-            if (panelData != null)
+            // Only scan UI Elements which have PanelData as this signifies a panel element with data to process
+            if (panelData != null) 
             {
-                Debug.WriteLine($"{nameof(UpdateChildPanelIfneeded)} checking {panelData.Entity.EntityId}.");
-
                 // Get this entity
-                Entity entity = allEntities.First(x => x.EntityId == panelData.Entity.EntityId);
+                Entity entity = allEntities.FirstOrDefault(x => x.EntityId == panelData.Entity.EntityId);
 
-                // Check if we need to update the dashboard with fresh data
-                if (entity.LastUpdated > panelData.LastDashboardtaUpdate)
+                if (entity != null)
                 {
-                    Panel panel;
-
-                    if (panelData.ChildrenEntities != null)
+                    // Check if we need to update the dashboard with fresh data
+                    if (entity.LastUpdated > panelData.LastDashboardtaUpdate)
                     {
-                        panel = CreateGroupEntityPanel(entity, panelData.ChildrenEntities);
-                    }
-                    else
-                    {
-                         panel = CreateChildEntityPanel(entity);
-                    }
+                        Debug.WriteLine($"{nameof(UpdateChildPanelIfneeded)} updating {panelData.Entity.EntityId}.");
 
-                    Panel parentPanel = (Panel)VisualTreeHelper.GetParent(element);
+                        Panel panel;
 
-                    int indexOfElement = parentPanel.Children.IndexOf(element);
-                    parentPanel.Children.RemoveAt(indexOfElement);
-                    parentPanel.Children.Insert(indexOfElement, panel);
+                        if (panelData.ChildrenEntities != null)
+                        {
+                            panel = CreateGroupEntityPanel(entity, panelData.ChildrenEntities);
+                        }
+                        else
+                        {
+                            panel = CreateChildEntityPanel(entity);
+                        }
+
+                        Panel parentPanel = (Panel)VisualTreeHelper.GetParent(element);
+
+                        int indexOfElement = parentPanel.Children.IndexOf(element);
+                        parentPanel.Children.RemoveAt(indexOfElement);
+                        parentPanel.Children.Insert(indexOfElement, panel);
+                    }
                 }
             }
             else

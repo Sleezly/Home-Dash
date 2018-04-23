@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Windows.UI;
 using Windows.UI.Xaml.Media;
+using System.Linq;
 
 namespace HashBoard
 {
@@ -14,13 +15,13 @@ namespace HashBoard
         public RGB() { }
         public RGB(byte r, byte g, byte b) { R = r; G = g; B = b; }
 
-        public static RGB Average(List<RGB> rgbList)
+        public static RGB Average(IEnumerable<RGB> rgbs)
         {
             int r = 0;
             int g = 0;
             int b = 0;
 
-            foreach (RGB rgb in rgbList)
+            foreach (RGB rgb in rgbs)
             {
                 r += rgb.R;
                 g += rgb.G;
@@ -28,9 +29,9 @@ namespace HashBoard
             }
 
             return new RGB(
-                Convert.ToByte(r / rgbList.Count),
-                Convert.ToByte(g / rgbList.Count),
-                Convert.ToByte(b / rgbList.Count));
+                Convert.ToByte(r / rgbs.Count()),
+                Convert.ToByte(g / rgbs.Count()),
+                Convert.ToByte(b / rgbs.Count()));
         }
 
         public static RGB GetBlendedColor(double percentage, Color left, Color right)
