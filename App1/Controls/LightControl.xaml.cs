@@ -114,12 +114,20 @@ namespace Hashboard
                 if (onEntities.Any())
                 {
                     // Average the brightness 
-                    double averageBrightness = onEntities.Select(x => Convert.ToDouble(x.Attributes["brightness"])).Cast<double>().Average();
-                    UpdateBrightnessControl(averageBrightness);
+                    IEnumerable<Entity> brightnessEntities = onEntities.Where(x => x.Attributes.ContainsKey("brightness"));
+                    if (brightnessEntities.Any())
+                    {
+                        double averageBrightness = onEntities.Select(x => Convert.ToDouble(x.Attributes["brightness"])).Cast<double>().Average();
+                        UpdateBrightnessControl(averageBrightness);
+                    }
+                    else
+                    {
+                        Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
+                        ellipse.Visibility = Visibility.Collapsed;
+                    }
 
                     // Average the color temperature
                     IEnumerable<Entity> colorTempEntities = onEntities.Where(x => x.Attributes.ContainsKey("color_temp"));
-
                     if (colorTempEntities.Any())
                     {
                         double averageColorTemperature = colorTempEntities.Select(x => Convert.ToDouble(x.Attributes["color_temp"])).Cast<double>().Average();
@@ -135,7 +143,6 @@ namespace Hashboard
 
                     // Average the color
                     IEnumerable<Entity> rgbEntities = onEntities.Where(x => x.Attributes.ContainsKey("rgb_color"));
-
                     if (rgbEntities.Any())
                     {
                         RGB averageColor = RGB.Average(rgbEntities.Select(x => new RGB(

@@ -42,7 +42,7 @@ namespace HashBoard
 
             if (entity.Attributes.ContainsKey("entity_picture"))
             {
-                grid.Background = Imaging.LoadImageBrush2($"http://{MainPage.hostname}{entity.Attributes["entity_picture"]}");
+                grid.Background = Imaging.LoadImageBrush2($"{MainPage.hostname}{entity.Attributes["entity_picture"]}");
             }
             
             grid.Children.Add(textName);

@@ -5,14 +5,16 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Windows.Devices.Sensors;
+using Windows.Graphics.Display;
+using Windows.System.Display;
 using Windows.UI;
-using Windows.UI.Popups;
+using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
-using Windows.UI.Xaml.Media.Imaging;
 using Windows.UI.Xaml.Navigation;
 using static HashBoard.PanelBuilderBase;
 
@@ -27,6 +29,8 @@ namespace HashBoard
 
         public const string apiPassword = "api_password=yavin333";
 
+        private const int LightSensorReadingRateInMs = 5000;
+
         private DateTime MousePressStartTime;
 
         private List<PanelBuilderBase> CustomEntities;
@@ -34,6 +38,15 @@ namespace HashBoard
         private CancellationTokenSource cancellationTokenSource;
 
         //private CancellationTokenSource cancellationTokenSourceContentDialog;
+
+        // Pxoximity sensors
+        //private ProximitySensor sensor;
+        //private ProximitySensorDisplayOnOffController displayController;
+        //private Windows.Devices.Enumeration.DeviceWatcher watcher;
+        private DisplayRequest DisplayRequestSetting = new DisplayRequest();
+        private BrightnessOverride BrightnessOverrideSetting;
+        private LightSensor LightSensorSetting;
+        private double PreviousDisplayBrightness;
 
         public MainPage()
         {
@@ -46,7 +59,103 @@ namespace HashBoard
         {
             base.OnNavigatedTo(e);
 
+            // Keep the display in the On state while the app is running
+            DisplayRequestSetting.RequestActive();
+
+            //watcher = Windows.Devices.Enumeration.DeviceInformation.CreateWatcher(ProximitySensor.GetDeviceSelector());
+            //watcher.Added += OnProximitySensorAdded;
+            //watcher.Start();
+
+            // Get capability to dim and brighten the display when needed
+            BrightnessOverrideSetting = BrightnessOverride.GetForCurrentView();
+            if (BrightnessOverrideSetting.IsSupported)
+            {
+                //brightnessOverride.SetBrightnessLevel(1.0, DisplayBrightnessOverrideOptions.None);
+                BrightnessOverrideSetting.StartOverride();
+            }
+
+            // Register for ambient light value changes
+            LightSensorSetting = LightSensor.GetDefault();
+            if (LightSensorSetting != null)
+            {
+                LightSensorSetting.ReportInterval = LightSensorReadingRateInMs;
+                LightSensorSetting.ReadingChanged += LightSensor_ReadingChanged;
+            }
+
             await LoadFrame();
+        }
+
+        /// <summary>
+        /// Ambient Light Sensor adjusts the brightness of the display. Less ambient light equates to a dimmer display.
+        /// </summary>
+        /// <param name="lightSensor"></param>
+        /// <param name="e"></param>
+        private async void LightSensor_ReadingChanged(LightSensor lightSensor, LightSensorReadingChangedEventArgs e)
+        {
+            await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+            {
+                LightSensorReading lightSensorReading = lightSensor.GetCurrentReading();
+
+                if (BrightnessOverrideSetting != null && BrightnessOverrideSetting.IsSupported)
+                {
+                    const double maximumAllowedBrightness = 0.5;
+                    const double highestLuxValueBeforeFullBrightness = 25.0;
+
+                    double brightness = Math.Min(lightSensorReading.IlluminanceInLux, highestLuxValueBeforeFullBrightness) / highestLuxValueBeforeFullBrightness * maximumAllowedBrightness;
+
+                    if (PreviousDisplayBrightness != brightness)
+                    {
+                        Debug.WriteLine($"LightSensorReading: {lightSensorReading.IlluminanceInLux.ToString()}. Setting brightness to {brightness.ToString()}.");
+
+                        BrightnessOverrideSetting.SetBrightnessLevel(brightness, DisplayBrightnessOverrideOptions.None);
+
+                        PreviousDisplayBrightness = brightness;
+                    }
+                }
+            });
+        }
+
+        /// <summary>
+        /// Invoked when the device watcher finds a proximity sensor.
+        /// </summary>
+        /// <param name="sender">The device watcher</param>
+        /// <param name="device">Device information for the proximity sensor that was found</param>
+        //private async void OnProximitySensorAdded(Windows.Devices.Enumeration.DeviceWatcher sender, Windows.Devices.Enumeration.DeviceInformation device)
+        //{
+        //    if (null == sensor)
+        //    {
+        //        ProximitySensor foundSensor = ProximitySensor.FromId(device.Id);
+
+        //        if (null != foundSensor)
+        //        {
+        //            sensor = foundSensor;
+
+        //            displayController = sensor.CreateDisplayOnOffController();
+        //        }
+        //        else
+        //        {
+        //            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+        //            {
+        //                Debug.WriteLine("Could not get a proximity sensor from the device id");
+        //            });
+        //        }
+        //    }
+        //}
+
+        /// <summary>
+        /// Invoked immediately before the Page is unloaded and is no longer the current source of a parent Frame.
+        /// </summary>
+        /// <param name="e"></param>
+        protected override void OnNavigatingFrom(NavigatingCancelEventArgs e)
+        {
+            //if (displayController != null)
+            //{
+            //    displayController.Dispose();
+            //    displayController = null;
+            //}
+            DisplayRequestSetting.RequestRelease();
+
+            base.OnNavigatingFrom(e);
         }
 
         private void LoadEntityHandler()
@@ -179,8 +288,8 @@ namespace HashBoard
         {
             DateTime now = DateTime.Now;
 
-            if (MousePressStartTime + TimeSpan.FromSeconds(5) > now &&
-                MousePressStartTime + TimeSpan.FromMilliseconds(500) < now)
+            if (MousePressStartTime + TimeSpan.FromSeconds(3) > now &&
+                MousePressStartTime + TimeSpan.FromMilliseconds(300) < now)
             {
                 PanelElement_Holding(sender, null);
             }
@@ -210,6 +319,11 @@ namespace HashBoard
             UpdateChildPanelIfneeded(panel, new List<Entity>() { panelData.Entity });
         }
 
+        /// <summary>
+        /// Iteract with the provided Data Panel and update the UI and children Panels where applicable.
+        /// </summary>
+        /// <param name="panel"></param>
+        /// <param name="panelData"></param>
         private void SendPanelDataWithJson(Panel panel, PanelData panelData)
         {
             if (panelData.ChildrenEntities != null)
@@ -422,11 +536,6 @@ namespace HashBoard
         {
             WrapPanel wrapPanel = new WrapPanel();
 
-            //TextBlock textBlock = new TextBlock();
-            //textBlock.Text = entityHeader.Attributes["friendly_name"];
-
-            //wrapPanel.Children.Add(textBlock);
-
             foreach (string groupEntityId in entityHeader.Attributes["entity_id"])
             {
                 Entity entity = allEntities.First(x => x.EntityId == groupEntityId);
@@ -473,103 +582,6 @@ namespace HashBoard
 
             return wrapPanel;
         }
-
-        //private Panel CreateHubSectionGroup(Entity groupEntity, IEnumerable<Entity> allEntities)
-        //{
-            //WrapPanel wrapPanel = new WrapPanel();
-            //wrapPanel.Orientation = Orientation.Vertical;
-
-            //TextBlock textBlock = new TextBlock();
-            //textBlock.Text = groupEntity.Attributes["friendly_name"];
-
-            //wrapPanel.Children.Add(textBlock);
-
-            //return CreateGroupEntityPanel(groupEntity, allEntities);
-
-            //if (customEntity != null)
-            //{
-            //    IEnumerable<Entity> childrenEntities = allStates.Where(s => entityIds.Any(e => e.ToString() == s.EntityId));
-
-            //    //Panel panel = CreateGroupEntityPanel(entity, childrenEntities);
-            //    Panel panel = customEntity.CreateGroupPanel(entity, childrenEntities);
-
-            //    if (panel != null)
-            //    {
-            //        actionPanel.Children.Add(panel);
-            //    }
-            //}
-            //return wrapPanel;
-        //}
-
-        //private StackPanel CreateTopPanel(IEnumerable<Entity> states)
-        //{
-        //    StackPanel stackPanel = new StackPanel();
-        //    stackPanel.BorderThickness = new Thickness(1, 1, 1, 1);
-        //    stackPanel.Orientation = Orientation.Horizontal;
-        //    stackPanel.Background = new SolidColorBrush(Colors.LightBlue);
-
-        //    foreach (Entity state in states)
-        //    {
-        //        TextBlock textBlock = new TextBlock();
-        //        textBlock.Text = state.Attributes["friendly_name"];
-
-        //        stackPanel.Children.Add(textBlock);
-        //    }
-
-        //    return stackPanel;
-        //}
-
-        //private WrapPanel CreateActionPanel(IEnumerable<Entity> allGroups, IEnumerable<Entity> allStates)
-        //{
-        //    WrapPanel actionPanel = new WrapPanel();
-        //    actionPanel.Orientation = Orientation.Horizontal;
-        //    actionPanel.HorizontalAlignment = HorizontalAlignment.Center;
-
-        //    foreach (Entity group in allGroups)
-        //    {
-                //Newtonsoft.Json.Linq.JArray entityIds = entity.Attributes["entity_id"];
-
-                //PanelBuilderBase customEntity = CustomEntities.FirstOrDefault(x =>
-                //    entityIds.Any(y => y.ToString().StartsWith(x.EntityIdStartsWith)));
-
-                //if (customEntity != null)
-                //{
-                //    IEnumerable<Entity> childrenEntities = allStates.Where(s => entityIds.Any(e => e.ToString() == s.EntityId));
-
-                //    //Panel panel = CreateGroupEntityPanel(entity, childrenEntities);
-                //    Panel panel = customEntity.CreateGroupPanel(entity, childrenEntities);
-
-                //    if (panel != null)
-                //    {
-                //        actionPanel.Children.Add(panel);
-                //    }
-                //}
-
-                /*
-                Panel panel = CreateGroupEntityPanel(entity, allStates);
-
-                if (panel != null)
-                {
-                    actionPanel.Children.Add(panel);
-                }
-
-                // Children
-                foreach (string entityId in entity.Attributes["entity_id"])
-                {
-                    Entity childEntity = allStates.First(s => s.EntityId == entityId);
-
-                    Panel childPanel = CreateChildEntityPanel(childEntity);
-
-                    if (childPanel != null)
-                    {
-                        actionPanel.Children.Add(childPanel);
-                    }
-                }
-                */
-       //     }
-       //
-       //     return actionPanel;
-       // }
 
         private Panel CreateGroupEntityPanel(Entity entity, IEnumerable<Entity> allStates)
         {
