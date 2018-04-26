@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Hashboard;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,9 +11,11 @@ namespace HashBoard
 {
     public class WebRequests
     {
-        public static async Task<T> GetData<T>(string hostname, string apiAction, string apiPassword)
+        private const string ApiPassword = "api_password";
+
+        public static async Task<T> GetData<T>(string apiAction)
         {
-            Uri uri = new Uri($"http://{hostname}/{apiAction}?{apiPassword}");
+            Uri uri = new Uri($"http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/{apiAction}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
 
             HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(uri);
             var response = (HttpWebResponse)await Task.Factory.FromAsync<WebResponse>(request.BeginGetResponse, request.EndGetResponse, null);
@@ -27,28 +30,28 @@ namespace HashBoard
 
         public static void SendActionNoData(string entityId)
         {
-            WebRequests.SendData(MainPage.hostname, entityId.Split('.')[0], entityId.Split('.')[1], MainPage.apiPassword, string.Empty);
+            WebRequests.SendData(entityId.Split('.')[0], entityId.Split('.')[1], string.Empty);
         }
 
         public static void SendAction(string entityId, string action)
         {
             string json = "{\"entity_id\":\"" + entityId + "\"}";
 
-            WebRequests.SendData(MainPage.hostname, entityId.Split('.')[0], action, MainPage.apiPassword, json);
+            WebRequests.SendData(entityId.Split('.')[0], action, json);
         }
 
         public static void SendAction(string action, IEnumerable<string> entityIds)
         {
             string json = "{\"entity_id\":[" + string.Join(',', entityIds.Select(x => "\"" + x + "\"").ToList()) + "]}";
 
-            WebRequests.SendData(MainPage.hostname, entityIds.First().Split('.')[0], action, MainPage.apiPassword, json);
+            WebRequests.SendData(entityIds.First().Split('.')[0], action, json);
         }
 
         public static void SendAction(string domain, string action, Dictionary<string, string> data)
         {
             string json = "{" + ParseDictionaryToJson(data) + "}";
 
-            WebRequests.SendData(MainPage.hostname, domain, action, MainPage.apiPassword, json);
+            WebRequests.SendData(domain, action, json);
         }
 
         public static void SendAction(string action, IEnumerable<string> entityIds, Dictionary<string, string> data)
@@ -57,7 +60,7 @@ namespace HashBoard
             //json += string.Join(",", data.Select(x => "\"" + x.Key + "\":\"" + x.Value + "\"").ToList()) + "}";
             json += ParseDictionaryToJson(data) + "}";
 
-            WebRequests.SendData(MainPage.hostname, entityIds.First().Split('.')[0], action, MainPage.apiPassword, json);
+            WebRequests.SendData(entityIds.First().Split('.')[0], action, json);
         }
 
         private static string ParseDictionaryToJson(Dictionary<string, string> data)
@@ -72,11 +75,11 @@ namespace HashBoard
                 ));
         }
 
-        private static void SendData(string hostname, string domain, string action, string apiPassword, string data)
+        private static void SendData(string domain, string action, string data)
         {
             Task.Factory.StartNew(async () =>
             { 
-                Uri uri = new Uri($"http://{hostname}/api/services/{domain}/{action}?{apiPassword}");
+                Uri uri = new Uri($"http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
 
                 HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(uri);
 

@@ -35,37 +35,7 @@ namespace Hashboard
 
             DrawColorWheel();
 
-            //Task.Factory.StartNew(async () =>
-            //{
-            //    ////await LoadColorWheelBitmapDecoder();
-            //    //IRandomAccessStream stream = await randomAccessStreamReference.OpenReadAsync();
-
-            //    //ColorWheelBitmapDecoder = await BitmapDecoder.CreateAsync(stream);
-
-            //    //PixelDataProvider pixelDataProvider = await ColorWheelBitmapDecoder.GetPixelDataAsync();
-
-            //    //ColorWheelPixelData = pixelDataProvider.DetachPixelData();
-            //});
-
             UpdateUI();
-
-            //ThreadPoolTimer timer = ThreadPoolTimer.CreatePeriodicTimer(async (t) =>
-            //{
-            //    Debug.WriteLine($"{DateTime.Now.ToLongTimeString()}");
-
-            //    PanelEntity = await WebRequests.GetData<Entity>(MainPage.hostname, $"api/states/{PanelEntity.EntityId}", MainPage.apiPassword);
-
-            //    await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-            //    {
-            //        UpdateUI();
-
-            //        if (this.Visibility == Visibility.Collapsed)
-            //        {
-            //            t.Cancel();
-            //        }
-            //    });
-
-            //}, TimeSpan.FromSeconds(1));
         }
 
         private void DrawColorWheel()
@@ -161,8 +131,7 @@ namespace Hashboard
                 }
                 else
                 {
-                    Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
-                    ellipse.Visibility = Visibility.Collapsed;
+                    UpdateBrightnessControl(0.0);
 
                     ShowColorTemperatureCircle(Visibility.Collapsed);
                     ShowColorWheelCircle(Visibility.Collapsed);
@@ -170,44 +139,54 @@ namespace Hashboard
             }
             else
             {
-                if (PanelEntity.Attributes.ContainsKey("brightness"))
+                if (string.Equals(PanelEntity.State, "on", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    UpdateBrightnessControl(Convert.ToDouble(PanelEntity.Attributes["brightness"]));
-                }
-                else
-                {
-                    Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
-                    ellipse.Visibility = Visibility.Collapsed;
-                }
-
-                if (PanelEntity.Attributes.ContainsKey("color_temp"))
-                {
-                    UpdateColorTemperatureControl(Convert.ToInt32(PanelEntity.Attributes["color_temp"]));
-
-                    ShowColorTemperatureCircle(Visibility.Visible);
-                }
-                else
-                {
-                    ShowColorTemperatureCircle(Visibility.Collapsed);
-                }
-
-                if (PanelEntity.Attributes.ContainsKey("rgb_color"))
-                {
-                    Newtonsoft.Json.Linq.JArray rgbColors = PanelEntity.Attributes["rgb_color"];
-
-                    RGB rgb = new RGB()
+                    if (PanelEntity.Attributes.ContainsKey("brightness"))
                     {
-                        R = Convert.ToByte(rgbColors[0]),
-                        G = Convert.ToByte(rgbColors[1]),
-                        B = Convert.ToByte(rgbColors[2]),
-                    };
+                        UpdateBrightnessControl(Convert.ToDouble(PanelEntity.Attributes["brightness"]));
+                    }
+                    else
+                    {
+                        Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
+                        ellipse.Visibility = Visibility.Collapsed;
+                    }
 
-                    SetColorCircleLocationAndColor(rgb);
+                    if (PanelEntity.Attributes.ContainsKey("color_temp"))
+                    {
+                        UpdateColorTemperatureControl(Convert.ToInt32(PanelEntity.Attributes["color_temp"]));
 
-                    ShowColorWheelCircle(Visibility.Visible);
+                        ShowColorTemperatureCircle(Visibility.Visible);
+                    }
+                    else
+                    {
+                        ShowColorTemperatureCircle(Visibility.Collapsed);
+                    }
+
+                    if (PanelEntity.Attributes.ContainsKey("rgb_color"))
+                    {
+                        Newtonsoft.Json.Linq.JArray rgbColors = PanelEntity.Attributes["rgb_color"];
+
+                        RGB rgb = new RGB()
+                        {
+                            R = Convert.ToByte(rgbColors[0]),
+                            G = Convert.ToByte(rgbColors[1]),
+                            B = Convert.ToByte(rgbColors[2]),
+                        };
+
+                        SetColorCircleLocationAndColor(rgb);
+
+                        ShowColorWheelCircle(Visibility.Visible);
+                    }
+                    else
+                    {
+                        ShowColorWheelCircle(Visibility.Collapsed);
+                    }
                 }
                 else
                 {
+                    UpdateBrightnessControl(0.0);
+
+                    ShowColorTemperatureCircle(Visibility.Collapsed);
                     ShowColorWheelCircle(Visibility.Collapsed);
                 }
             }
@@ -421,6 +400,7 @@ namespace Hashboard
             BitmapIcon bitmapIcon = sender as BitmapIcon;
             bitmapIcon.Foreground = new SolidColorBrush(Colors.DarkGray);
         }
+
         private void PowerButton_PointerExited(object sender, PointerRoutedEventArgs e)
         {
             BitmapIcon bitmapIcon = sender as BitmapIcon;

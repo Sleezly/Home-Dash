@@ -81,9 +81,9 @@ namespace HashBoard
         {
             if (entity.Attributes.ContainsKey("rgb_color"))
             {
-                byte r = entity.Attributes["rgb_color"][0];
-                byte g = entity.Attributes["rgb_color"][1];
-                byte b = entity.Attributes["rgb_color"][2];
+                byte r = Convert.ToByte(entity.Attributes["rgb_color"][0]);
+                byte g = Convert.ToByte(entity.Attributes["rgb_color"][1]);
+                byte b = Convert.ToByte(entity.Attributes["rgb_color"][2]);
 
                 return new RGB(r, g, b);
             }

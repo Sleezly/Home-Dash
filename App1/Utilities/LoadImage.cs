@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Hashboard;
+using System;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
@@ -35,10 +36,9 @@ namespace HashBoard
             return imageBrush;
         }
 
-
         public static ImageBrush LoadImageBrush2(string asset)
         {
-            Uri imageUri = new Uri($"http://{asset}");
+            Uri imageUri = new Uri($"http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}{asset}");
 
             BitmapImage bitmapImage = new BitmapImage(imageUri);
 
@@ -51,7 +51,7 @@ namespace HashBoard
 
         public static ImageSource LoadImageSource(string asset)
         {
-            Uri imageUri = new Uri($"http://{asset}");
+            Uri imageUri = new Uri($"http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}{asset}");
 
             return new BitmapImage(imageUri);
         }

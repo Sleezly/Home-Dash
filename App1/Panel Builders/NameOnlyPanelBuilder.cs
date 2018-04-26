@@ -24,6 +24,11 @@ namespace HashBoard
             textBlock.HorizontalAlignment = HorizontalAlignment.Center;
             textBlock.VerticalAlignment = VerticalAlignment.Center;
 
+            if (entity.Attributes.ContainsKey("local_assets_picture"))
+            {
+                grid.Background = Imaging.LoadImageBrush(entity.Attributes["local_assets_picture"]);
+            }
+
             grid.Children.Add(textBlock);
 
             return grid;

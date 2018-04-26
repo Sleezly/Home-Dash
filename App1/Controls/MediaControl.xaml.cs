@@ -50,7 +50,7 @@ namespace Hashboard
             {
                 Debug.WriteLine($"{DateTime.Now.ToLongTimeString()}");
 
-                PanelEntity = await WebRequests.GetData<Entity>(MainPage.hostname, $"api/states/{PanelEntity.EntityId}", MainPage.apiPassword);
+                PanelEntity = await WebRequests.GetData<Entity>($"api/states/{PanelEntity.EntityId}");
 
                 await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                 {
@@ -100,7 +100,7 @@ namespace Hashboard
                 if (!string.Equals(PanelEntity.Attributes["entity_picture"], imageMedia.Tag?.ToString(), StringComparison.InvariantCultureIgnoreCase))
                 {
                     imageMedia.Tag = PanelEntity.Attributes["entity_picture"];
-                    imageMedia.Source = Imaging.LoadImageSource($"{MainPage.hostname}{PanelEntity.Attributes["entity_picture"]}");
+                    imageMedia.Source = Imaging.LoadImageSource(PanelEntity.Attributes["entity_picture"]);
                 }
             }
 

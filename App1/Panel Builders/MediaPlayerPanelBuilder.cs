@@ -43,7 +43,7 @@ namespace HashBoard
 
             if (entity.Attributes.ContainsKey("entity_picture"))
             {
-                grid.Background = Imaging.LoadImageBrush2($"{MainPage.hostname}{entity.Attributes["entity_picture"]}");
+                grid.Background = Imaging.LoadImageBrush2(entity.Attributes["entity_picture"]);
                 //grid.Opacity = 0.1;
 
                 textBlock.VerticalAlignment = VerticalAlignment.Bottom;

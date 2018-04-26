@@ -11,7 +11,7 @@ namespace HashBoard
         public string State { get; set; }
 
         [DataMember(Name = "entity_id")]
-        public string EntityId { get; protected set; }
+        public string EntityId { get; set; }
 
         [DataMember(Name = "last_changed")]
         public DateTime LastChanged { get; set; }

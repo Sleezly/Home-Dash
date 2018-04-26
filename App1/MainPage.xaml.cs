@@ -1,4 +1,5 @@
-﻿using Microsoft.Toolkit.Uwp.UI.Controls;
+﻿using Hashboard;
+using Microsoft.Toolkit.Uwp.UI.Controls;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,6 +11,7 @@ using Windows.Graphics.Display;
 using Windows.System.Display;
 using Windows.UI;
 using Windows.UI.Core;
+using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -25,11 +27,15 @@ namespace HashBoard
     /// </summary>
     public sealed partial class MainPage : Page
     {
-        public const string hostname = "hassio.local:8123";
+        //public const string Host = "hassio.local";
 
-        public const string apiPassword = "api_password=yavin333";
+        //public const string Port = "8123";
+
+        //public const string ApiPassword = "api_password=yavin333";
 
         private const int LightSensorReadingRateInMs = 5000;
+
+        private const string SettingsMenuPanelName = "settingsmenu";
 
         private DateTime MousePressStartTime;
 
@@ -47,6 +53,8 @@ namespace HashBoard
         private BrightnessOverride BrightnessOverrideSetting;
         private LightSensor LightSensorSetting;
         private double PreviousDisplayBrightness;
+
+        MqttSubscriber mqttSubscriber;
 
         public MainPage()
         {
@@ -83,6 +91,10 @@ namespace HashBoard
             }
 
             await LoadFrame();
+
+            StartPollingThread();
+
+            StartMqttSubscriber();
         }
 
         /// <summary>
@@ -105,7 +117,7 @@ namespace HashBoard
 
                     if (PreviousDisplayBrightness != brightness)
                     {
-                        Debug.WriteLine($"LightSensorReading: {lightSensorReading.IlluminanceInLux.ToString()}. Setting brightness to {brightness.ToString()}.");
+                        //Debug.WriteLine($"LightSensorReading: {lightSensorReading.IlluminanceInLux.ToString()}. Setting brightness to {brightness.ToString()}.");
 
                         BrightnessOverrideSetting.SetBrightnessLevel(brightness, DisplayBrightnessOverrideOptions.None);
 
@@ -204,7 +216,7 @@ namespace HashBoard
                     HoldEventHandler = PanelElement_Holding,
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
-                
+
                 new NameOnlyPanelBuilder() {
                     EntityIdStartsWith = "script.",
                     TapEventHandler = PanelElement_Tapped,
@@ -228,6 +240,15 @@ namespace HashBoard
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
 
+                new NameOnlyPanelBuilder() {
+                    EntityIdStartsWith = $"{SettingsMenuPanelName}.",
+                    EntityPopupControl = nameof(Hashboard.SettingsControl),
+                    TapEventAction = nameof(Hashboard.SettingsControl),
+                    TapEventHandler = PanelElement_Tapped,
+                    HoldEventHandler = PanelElement_Holding,
+                    PressedEventHandler = PanelElement_PointerPressed,
+                    ReleasedEventHandler = PanelElement_PointerExited},
+                
                 new GenericPanelBuilder() { EntityIdStartsWith = string.Empty },
             };
         }
@@ -257,6 +278,10 @@ namespace HashBoard
                             popupContent = new Hashboard.MediaControl(panelData.Entity);
                             break;
 
+                        case nameof(Hashboard.SettingsControl):
+                            popupContent = new Hashboard.SettingsControl();
+                            break;
+
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
@@ -270,12 +295,24 @@ namespace HashBoard
                             Child = popupContent,
                         };
 
-                        popup.HorizontalOffset = Window.Current.Bounds.Width / 2 - 150;
-                        popup.VerticalOffset = Window.Current.Bounds.Height / 2 - 250;
-
-                        popup.Closed += (s, re) =>
+                        popup.Closed += async (s, re) =>
                         {
-                            popup.Child.Visibility = Visibility.Collapsed;
+                            if (popup.Child is SettingsControl)
+                            {
+                                await LoadFrame();
+
+                                StartPollingThread();
+
+                                StartMqttSubscriber();
+                            }
+                        };
+
+                        popup.Loaded += (s, re) =>
+                        {
+                            FrameworkElement child = popup.Child as FrameworkElement;
+                            
+                            popup.HorizontalOffset = Window.Current.Bounds.Width / 2 - child.ActualWidth / 2;
+                            popup.VerticalOffset = Window.Current.Bounds.Height / 2 - child.ActualHeight / 2;
                         };
 
                         popup.IsOpen = true;
@@ -283,7 +320,83 @@ namespace HashBoard
                 }
             }
         }
-        
+
+        /// <summary>
+        /// Application settings update
+        /// </summary>
+        private async void StartPollingThread()
+        {
+            if (SettingsControl.HomeAssistantPollingInterval == default(TimeSpan))
+            {
+                if (cancellationTokenSource != null)
+                {
+                    Debug.WriteLine($"{nameof(StartPollingThread)} stopping polling thread as polling interval is set to zero.");
+
+                    cancellationTokenSource.Cancel();
+                }
+                else
+                {
+                    Debug.WriteLine($"{nameof(StartPollingThread)} no polling thread as polling interval is not set.");
+                }
+            }
+            else
+            {
+                // Kick off the entity updater thread to keep the data in sync
+                cancellationTokenSource = new CancellationTokenSource();
+                await Task.Run(() => PeriodicEntityUpdatePollingThread(cancellationTokenSource.Token), cancellationTokenSource.Token);
+            }
+        }
+
+        /// <summary>
+        /// Starts the MQTT subscriber when needed.
+        /// </summary>
+        private void StartMqttSubscriber()
+        {
+            if (string.IsNullOrEmpty(SettingsControl.MqttBrokerHostname))
+            {
+                Debug.WriteLine($"{nameof(StartMqttSubscriber)} no MQTT subscriber as polling interval is no MQTT broker hostname is set.");
+                return;
+            }
+
+            if (mqttSubscriber == null)
+            {
+                mqttSubscriber = new MqttSubscriber(OnEntityUpdated, OnMqttBrokerConnectionResult);
+            }
+
+            if (!mqttSubscriber.IsSubscribed)
+            {
+                mqttSubscriber.Connect();
+
+                Debug.WriteLine($"{nameof(StartMqttSubscriber)} connecting to MQTT.");
+            }
+            else
+            {
+                Debug.WriteLine($"{nameof(StartMqttSubscriber)} MQTT subscriber is already subscribed.");
+            }
+        }
+
+        /// <summary>
+        /// Handle MQTT Broker connection attmpts with failure message prompts for the user.
+        /// </summary>
+        /// <param name="connectionResponse"></param>
+        private async void OnMqttBrokerConnectionResult(byte connectionResponse)
+        {
+            if (connectionResponse != 0)
+            {
+                await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
+                {
+                    MessageDialog dialog = new MessageDialog($"Failed to connect to MQTT broker '{SettingsControl.MqttBrokerHostname}'." +
+                        $"Response '{connectionResponse}': '{mqttSubscriber.Status}'.", "MQTT Broker");
+
+                    await dialog.ShowAsync();
+                });
+            }
+            else
+            {
+                Debug.WriteLine($"{nameof(StartMqttSubscriber)} successfully subscribed to MQTT brodker '{SettingsControl.MqttBrokerHostname}.");
+            }
+        }
+
         private void PanelElement_Tapped(object sender, TappedRoutedEventArgs e)
         {
             DateTime now = DateTime.Now;
@@ -304,7 +417,14 @@ namespace HashBoard
                 }
                 else
                 {
-                    SendPanelDataWithJson((Panel)sender, panelData);
+                    if (string.Equals(panelData.ServiceToInvokeOnTap, nameof(SettingsControl), StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        PanelElement_Holding(sender, null);
+                    }
+                    else
+                    {
+                        SendPanelDataWithJson((Panel)sender, panelData);
+                    }
                 }
             }
         }
@@ -340,7 +460,7 @@ namespace HashBoard
                     child.LastUpdated = DateTime.Now;
                 }
 
-                UpdateChildPanelIfneeded((FrameworkElement)this.Content, panelData.ChildrenEntities.Union(new List<Entity> { panelData.Entity } ));
+                UpdateChildPanelIfneeded((FrameworkElement)this.Content, panelData.ChildrenEntities.Union(new List<Entity> { panelData.Entity }));
             }
             else
             {
@@ -365,68 +485,78 @@ namespace HashBoard
         private void PanelElement_PointerExited(object sender, PointerRoutedEventArgs e)
         {
             Panel panel = sender as Panel;
-            
+
             panel.Background = PanelData.GetPanelData(sender).BackgroundBrush;
         }
 
-        private async Task LoadFrame()
+        // Don't overload the system on start
+        private DateTime lastRefreshTime = DateTime.Now.AddSeconds(10);
+
+        private async void OnEntityUpdated(string entityId)
         {
-            DateTime dateTimeStart = DateTime.Now;
+            // Prevent flooding by disallowing multiple requests to be queued up over a short period
+            if (lastRefreshTime.AddSeconds(3) < DateTime.Now)
+            {
+                lastRefreshTime = DateTime.Now;
 
-            Task<List<Entity>> task = WebRequests.GetData<List<Entity>>(hostname, "api/states", apiPassword);
+                //Entity entity = await WebRequests.GetData<Entity>($"api/states/{entityId}");
+                // Get all entities -- this ensures mutliple entities will be updated at the same time
+                // and ensure group entities may update if needed as well.
+                IEnumerable<Entity> entities = await WebRequests.GetData<IEnumerable<Entity>>($"api/states");
 
-            List<Entity> allEntities = await task;
-
-            //IOrderedEnumerable<Entity> orderedEntities = allEntities.Where(entity => entity.Attributes != null && entity.Attributes.ContainsKey("entity_id")).OrderBy(entity => (int)entity.Attributes["order"]);
-
-            TimeSpan duration = DateTime.Now - dateTimeStart;
-            Debug.WriteLine($"{nameof(LoadFrame)} took {duration.TotalMilliseconds}ms to retrieve list of all States from HomeAssistant.");
-
-            //IEnumerable<Entity> entityHeaders = allGroups.Where(group => group.Attributes.ContainsKey("view"));
-            //IEnumerable<Entity> allCards = allGroups.Where(group => !group.Attributes.ContainsKey("view"));
-
-            //ScrollViewer scrollViewer = new ScrollViewer();
-            //scrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-
-            //StackPanel mainStackPanel = new StackPanel();
-            //mainStackPanel.Orientation = Orientation.Vertical;
-            //mainStackPanel.HorizontalAlignment = HorizontalAlignment.Center;
-
-            //mainStackPanel.Children.Add(CreateTopPanel(allViews));
-            //mainStackPanel.Children.Add(CreateActionPanel(allCards, allEntities));
-
-            //scrollViewer.Content = mainStackPanel;
-
-            //ImageBrush imageBrush = Imaging.LoadImageBrush("background-blue.jpg");
-
-            //scrollViewer.Background = imageBrush;
-
-            //this.Content = scrollViewer;
-
-            this.Content = CreateViews(allEntities);
-
-            duration = DateTime.Now - dateTimeStart;
-            Debug.WriteLine($"{nameof(LoadFrame)} took {duration.TotalMilliseconds}ms to run.");
-
-            // Kick off the entity updater thread to keep the data in sync
-            cancellationTokenSource = new CancellationTokenSource();
-            await Task.Run(() => EntityUpdateThread(cancellationTokenSource.Token), cancellationTokenSource.Token);
+                await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+                {
+                    UpdateChildPanelIfneeded((FrameworkElement)this.Content, entities);
+                });
+            }
+            else
+            {
+                Debug.WriteLine($"{nameof(OnEntityUpdated)} - Updated too recently, ignoring update for: {entityId}.");
+            }
         }
 
-        private async void EntityUpdateThread(CancellationToken cancellationToken)
+        /// <summary>
+        /// Queries Home Assistant for state information and then populates the main view with panels to 
+        /// show the state information.
+        /// </summary>
+        /// <returns></returns>
+        private async Task LoadFrame()
         {
-            Debug.WriteLine($"{nameof(EntityUpdateThread)} now running.");
+            if (!string.IsNullOrEmpty(SettingsControl.HomeAssistantHostname))
+            {
+                Task<List<Entity>> task = WebRequests.GetData<List<Entity>>("api/states");
+
+                if (this.Content != null)
+                {
+                    this.Content = null;
+                }
+
+                this.Content = CreateViews(await task);
+            }
+            else
+            {
+                this.Content = CreateViews(new List<Entity>());
+            }
+        }
+
+        /// <summary>
+        /// Polling thread. Updates all entity panels with updated state information after querying
+        /// Home Assistant for all entities.
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        private async void PeriodicEntityUpdatePollingThread(CancellationToken cancellationToken)
+        {
+            Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} now running.");
 
             // Infinite loop until told to stop
             while (!cancellationToken.IsCancellationRequested)
             {
-                DateTime now = DateTime.Now;
-
-                if (!cancellationToken.IsCancellationRequested)
+                if (!cancellationToken.IsCancellationRequested && !string.IsNullOrEmpty(SettingsControl.HomeAssistantHostname))
                 {
-                    Debug.WriteLine($"{nameof(EntityUpdateThread)} is awake. Now processing.");
+                    Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} is awake. Now processing.");
 
-                    Task<List<Entity>> task = WebRequests.GetData<List<Entity>>(hostname, "api/states", apiPassword);
+                    Task<List<Entity>> task = WebRequests.GetData<List<Entity>>("api/states");
+
                     List<Entity> allEntities = await task;
 
                     await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
@@ -435,12 +565,12 @@ namespace HashBoard
                     });
                 }
 
-                Debug.WriteLine($"{nameof(EntityUpdateThread)} now sleeping.");
+                Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} now sleeping.");
 
-                Task.Delay(10000, cancellationToken).ContinueWith(tsk => { }).Wait();
+                Task.Delay(SettingsControl.HomeAssistantPollingInterval, cancellationToken).ContinueWith(tsk => { }).Wait();
             }
 
-            Debug.WriteLine($"{nameof(EntityUpdateThread)} now terminating.");
+            Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} now terminating.");
         }
 
         /// <summary>
@@ -451,42 +581,45 @@ namespace HashBoard
         private void UpdateChildPanelIfneeded(FrameworkElement element, IEnumerable<Entity> allEntities)
         {
             PanelData panelData = PanelData.GetPanelData(element);
-            
+
             // Only scan UI Elements which have PanelData as this signifies a panel element with data to process
-            if (panelData != null) 
+            if (panelData != null)
             {
-                // Get this entity
                 Entity entity = allEntities.FirstOrDefault(x => x.EntityId == panelData.Entity.EntityId);
 
+                // Some panels, such as the custom Settings panel, are not backed by entity data so skip those here
                 if (entity != null)
                 {
-                    // Check if we need to update the dashboard with fresh data
-                    if (entity.LastUpdated > panelData.LastDashboardtaUpdate)
+                    // Don't try to be fancy here. Simply update all entities as this is cheaper, easier and less 
+                    // error-prone than attempt to identify which entity needs to be updated and which doesn't
+                    // or which group(s) an entity is associated with, etc.
+
+                    Panel panel;
+
+                    if (entity.Attributes.ContainsKey("entity_id"))
                     {
-                        Debug.WriteLine($"{nameof(UpdateChildPanelIfneeded)} updating {panelData.Entity.EntityId}.");
+                        // Update group panels
+                        Newtonsoft.Json.Linq.JArray childrenEntityIds = entity.Attributes["entity_id"];
+                        IEnumerable<Entity> childrenEntities = allEntities.Where(s => childrenEntityIds.Any(e => e.ToString() == s.EntityId));
 
-                        Panel panel;
-
-                        if (panelData.ChildrenEntities != null)
-                        {
-                            panel = CreateGroupEntityPanel(entity, panelData.ChildrenEntities);
-                        }
-                        else
-                        {
-                            panel = CreateChildEntityPanel(entity);
-                        }
-
-                        Panel parentPanel = (Panel)VisualTreeHelper.GetParent(element);
-
-                        int indexOfElement = parentPanel.Children.IndexOf(element);
-                        parentPanel.Children.RemoveAt(indexOfElement);
-                        parentPanel.Children.Insert(indexOfElement, panel);
+                        panel = CreateGroupEntityPanel(entity, childrenEntities);
                     }
+                    else
+                    {
+                        // Update single panels
+                        panel = CreateChildEntityPanel(entity);
+                    }
+
+                    // Replace the old panel with the new panel
+                    Panel parentPanel = (Panel)VisualTreeHelper.GetParent(element);
+                    int indexOfElement = parentPanel.Children.IndexOf(element);
+                    parentPanel.Children.RemoveAt(indexOfElement);
+                    parentPanel.Children.Insert(indexOfElement, panel);
                 }
             }
             else
             {
-                // Update all children
+                // Attempt to update panels with this current parent element
                 int childCount = VisualTreeHelper.GetChildrenCount(element);
                 for (int i = 0; i < childCount; i++)
                 {
@@ -497,31 +630,71 @@ namespace HashBoard
         }
 
         /// <summary>
+        /// Create a Panel for the purpose of loading a Settings UI selection popup screen.
+        /// </summary>
+        /// <returns></returns>
+        private WrapPanel CreateSettingsPanel()
+        {
+            // Create a Settings panel as well
+            Entity settingsEntity = new Entity()
+            {
+                EntityId = $"{SettingsMenuPanelName}.{SettingsMenuPanelName}",
+                LastChanged = DateTime.Now,
+                LastUpdated = DateTime.Now,
+                State = "on",
+                Attributes = new Dictionary<string, dynamic>() {
+                    { "friendly_name", string.Empty },
+                    { "local_assets_picture", "panel-settings.png" }
+            } };
+
+            // Create a custom Settings group view
+            Entity settingsView = new Entity()
+            {
+                EntityId = $"group.{SettingsMenuPanelName}",
+                LastChanged = DateTime.Now,
+                LastUpdated = DateTime.Now,
+                State = "off",
+                Attributes = new Dictionary<string, dynamic>() {
+                    { "friendly_name", "Settings" },
+                    { "entity_id", new List<string>() { settingsEntity.EntityId }  },
+                    { "order", 999 },
+                    { "view", true },
+            } };
+
+            return CreateEntitiesInView(settingsView, new List<Entity>() { settingsEntity });
+        }
+
+        /// <summary>
         /// Create the main hub view.
         /// </summary>
         /// <param name="allEntities"></param>
         /// <returns></returns>
         private ScrollViewer CreateViews(IEnumerable<Entity> allEntities)
         {
+            ImageBrush imageBrush = Imaging.LoadImageBrush("background-blue.jpg");
+
             ScrollViewer scrollViewer = new ScrollViewer();
             scrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+            scrollViewer.Background = imageBrush;
 
             StackPanel stackPanel = new StackPanel();
             stackPanel.Orientation = Orientation.Vertical;
             stackPanel.HorizontalAlignment = HorizontalAlignment.Center;
 
+            // Get all home assistant "group" entities which have the "view=true" attribute set in customizations.yaml
             IEnumerable<Entity> entityHeaders = allEntities.Where(group => group.Attributes.ContainsKey("view"));
 
+            // Add all single and group entities which are tied to each view
             foreach (Entity entityHeader in entityHeaders)
             {
                 stackPanel.Children.Add(CreateEntitiesInView(entityHeader, allEntities));
             }
 
+            // Add a Settings panel
+            stackPanel.Children.Add(CreateSettingsPanel());
+
+
             scrollViewer.Content = stackPanel;
-
-            ImageBrush imageBrush = Imaging.LoadImageBrush("background-blue.jpg");
-
-            scrollViewer.Background = imageBrush;
 
             return scrollViewer;
         }
@@ -562,7 +735,6 @@ namespace HashBoard
                             wrapPanel.Children.Add(panelChild);
                         }
                     }
-                    
                 }
                 else
                 {
@@ -590,11 +762,13 @@ namespace HashBoard
                 return null;
             }
 
-            Newtonsoft.Json.Linq.JArray entityIds = entity.Attributes["entity_id"];
+            Newtonsoft.Json.Linq.JArray childrenEntityIds = entity.Attributes["entity_id"];
+            //Newtonsoft.Json.Linq.JArray entityIds = entity.Attributes["entity_id"];
+            //var entityIds = entity.Attributes["entity_id"];
+            
+            PanelBuilderBase customEntity = CustomEntities.FirstOrDefault(x => childrenEntityIds.Any(y => y.ToString().StartsWith(x.EntityIdStartsWith)));
 
-            PanelBuilderBase customEntity = CustomEntities.FirstOrDefault(x => entityIds.Any(y => y.ToString().StartsWith(x.EntityIdStartsWith)));
-
-            IEnumerable<Entity> childrenEntities = allStates.Where(s => entityIds.Any(e => e.ToString() == s.EntityId));
+            IEnumerable<Entity> childrenEntities = allStates.Where(s => childrenEntityIds.Any(e => e.ToString() == s.EntityId));
 
             return customEntity.CreateGroupPanel(entity, childrenEntities);
         }
