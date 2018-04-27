@@ -15,14 +15,13 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Shapes;
 
-
 namespace Hashboard
 {
     public partial class MediaControl : UserControl
     {
         private Entity PanelEntity;
 
-        private CancellationTokenSource cancellationTokenSource;
+        //private CancellationTokenSource cancellationTokenSource;
 
         public MediaControl(Entity entity)
         {
@@ -44,53 +43,67 @@ namespace Hashboard
 
             UpdateUI();
 
-            cancellationTokenSource = new CancellationTokenSource();
+            //cancellationTokenSource = new CancellationTokenSource();
 
-            ThreadPoolTimer timer = ThreadPoolTimer.CreatePeriodicTimer(async (t) =>
-            {
-                Debug.WriteLine($"{DateTime.Now.ToLongTimeString()}");
+            //ThreadPoolTimer timer = ThreadPoolTimer.CreatePeriodicTimer(async (t) =>
+            //{
+            //    Debug.WriteLine($"{nameof(MediaControl)} is polling for state changes:  {DateTime.Now.ToLongTimeString()}.");
 
-                PanelEntity = await WebRequests.GetData<Entity>($"api/states/{PanelEntity.EntityId}");
+            //    PanelEntity = await WebRequests.GetData<Entity>($"api/states/{PanelEntity.EntityId}");
 
-                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-                {
-                    UpdateUI();
+            //    await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            //    {
+            //        UpdateUI();
 
-                    if (this.Visibility == Visibility.Collapsed)
-                    {
-                        t.Cancel();
-                    }
-                });
+            //        if (this.Visibility == Visibility.Collapsed)
+            //        {
+            //            t.Cancel();
+            //        }
+            //    });
 
-            }, TimeSpan.FromSeconds(1));
+            //}, TimeSpan.FromSeconds(1));
         }
 
         private void UpdateUI()
         {
+            TextBlock textDeviceText = FindName("DeviceText") as TextBlock;
+            TextBlock textArtistText = FindName("ArtistText") as TextBlock;
+            TextBlock textTrackText = FindName("TrackText") as TextBlock;
+
             if (PanelEntity.Attributes.ContainsKey("friendly_name"))
             {
-                TextBlock textBlock = FindName("DeviceText") as TextBlock;
-                textBlock.Text = PanelEntity.Attributes["friendly_name"];
+                textDeviceText.Text = PanelEntity.Attributes["friendly_name"];
+            }
+            else
+            {
+                textDeviceText.Text = string.Empty;
             }
 
             if (PanelEntity.Attributes.ContainsKey("media_artist"))
             {
-                TextBlock textBlock = FindName("ArtistText") as TextBlock;
-                textBlock.Text = PanelEntity.Attributes["media_artist"];
+                textArtistText.Text = PanelEntity.Attributes["media_artist"];
+            }
+            else
+            {
+                textArtistText.Text = string.Empty;
             }
 
             // Spotify only has "media_title"
             if (PanelEntity.Attributes.ContainsKey("media_title"))
             {
-                TextBlock textBlock = FindName("TrackText") as TextBlock;
-                textBlock.Text = PanelEntity.Attributes["media_title"];
+                textTrackText.Text = PanelEntity.Attributes["media_title"];
+
+                // This text element is also set by the 'media_track' attribute so no need for an else{} block.
             }
 
             // Bose has "media_track" and "media_title" but we just want the track name so do this after "media_title"
             if (PanelEntity.Attributes.ContainsKey("media_track"))
             {
-                TextBlock textBlock = FindName("TrackText") as TextBlock;
-                textBlock.Text = PanelEntity.Attributes["media_track"];
+                textTrackText.Text = PanelEntity.Attributes["media_track"];
+            }
+            else
+            {
+                textTrackText.Text = string.Empty;
             }
 
             if (PanelEntity.Attributes.ContainsKey("entity_picture"))
@@ -166,6 +179,7 @@ namespace Hashboard
             BitmapIcon bitmapIcon = sender as BitmapIcon;
             bitmapIcon.Foreground = new SolidColorBrush(Colors.DarkGray);
         }
+
         private void ButtonPrevious_PointerExited(object sender, PointerRoutedEventArgs e)
         {
             BitmapIcon bitmapIcon = sender as BitmapIcon;
@@ -238,8 +252,8 @@ namespace Hashboard
             {
                 Line scobblerProgress2 = this.FindName("ScobblerProgress2") as Line;
 
-                scobblerProgress1.X2 = scobblerLine.X2 * percentageNew;
-                scobblerProgress2.X1 = scobblerProgress1.X2 - scobblerProgress2.StrokeThickness;
+                scobblerProgress1.X2 = (scobblerLine.X2 - scobblerProgress1.StrokeThickness) * percentageNew + scobblerProgress1.StrokeThickness;
+                //scobblerProgress2.X1 = scobblerProgress1.X2 - scobblerProgress2.StrokeThickness;
 
                 Dictionary<string, string> serviceData = new Dictionary<string, string>()
                 {
@@ -250,6 +264,5 @@ namespace Hashboard
                 WebRequests.SendAction(PanelEntity.EntityId.Split('.')[0], "volume_set", serviceData);
             }
         }
-        
     }
 }

@@ -137,11 +137,11 @@ namespace Hashboard
         {
             get
             {
-                if (int.TryParse(localSettings.Values["HomeAssistantPollingInterval"] as string, out int interval))
+                if (Int32.TryParse(localSettings.Values["HomeAssistantPollingInterval"] as string, out int interval))
                 {
                     return TimeSpan.FromSeconds(interval);
                 }
-                else;
+                else
                 {
                     return default(TimeSpan);
                 }

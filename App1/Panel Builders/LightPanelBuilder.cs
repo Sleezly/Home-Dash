@@ -1,5 +1,5 @@
-﻿using Microsoft.Toolkit.Uwp.UI.Controls;
-using System;
+﻿using Hashboard;
+using Microsoft.Toolkit.Uwp.UI.Controls;
 using System.Collections.Generic;
 using Windows.UI;
 using Windows.UI.Text;
@@ -17,7 +17,7 @@ namespace HashBoard
 
             if (entity.State == "on")
             {
-                RGB rgb = GetColor(entity);
+                RGB rgb = entity.GetColor();
                 backgroundBrush = new SolidColorBrush(Color.FromArgb(CellOpacity, rgb.R, rgb.G, rgb.B));
             }
             else
@@ -36,7 +36,7 @@ namespace HashBoard
             {
                 if (childEntity.State == "on")
                 {
-                    rgbList.Add(GetColor(childEntity));
+                    rgbList.Add(childEntity.GetColor());
                 }
             }
 
@@ -75,28 +75,6 @@ namespace HashBoard
             panel.Children.Add(textBlock);
 
             return panel;
-        }
-
-        private RGB GetColor(Entity entity)
-        {
-            if (entity.Attributes.ContainsKey("rgb_color"))
-            {
-                byte r = Convert.ToByte(entity.Attributes["rgb_color"][0]);
-                byte g = Convert.ToByte(entity.Attributes["rgb_color"][1]);
-                byte b = Convert.ToByte(entity.Attributes["rgb_color"][2]);
-
-                return new RGB(r, g, b);
-            }
-            else if (entity.Attributes.ContainsKey("color_temp"))
-            {
-                int colorTemperature = Convert.ToInt32(entity.Attributes["color_temp"]);
-                return ColorConverter.MiredToRGB(colorTemperature);
-            }
-            else
-            {
-                // Default to 2700 Kelvin
-                return ColorConverter.MiredToRGB(370);
-            }
         }
     }
 }

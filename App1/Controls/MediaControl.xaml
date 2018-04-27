@@ -2,8 +2,9 @@
     x:Class="Hashboard.MediaControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:HashBoard"
     Width="300"
-    Height="500">
+    Height="510">
 
     <StackPanel x:Name="RootPanel" Orientation="Vertical" Background="Black" Padding="4">
         <TextBlock x:Name="DeviceText" HorizontalAlignment="Center" Text="DeviceText" Foreground="White" FontSize="24"/>
@@ -18,11 +19,11 @@
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
             <BitmapIcon x:Name="ButtonVolumeDown" Foreground="White" UriSource="ms-appx:///Assets/volume-low.png" Width="36" Height="36" Tag="volume_down" Tapped="BitmapIcon_Tapped" PointerPressed="ButtonPrevious_PointerPressed" PointerExited="ButtonPrevious_PointerExited"/>
             <Grid HorizontalAlignment="Center" Width="140">
-                <Line x:Name="ScobblerProgress1" X1="0" X2="1" Y1="18" Y2="18" StrokeThickness="8" Stroke="Lime"/>
-                <Line x:Name="ScobblerProgress2" X1="1" X2="136" Y1="18" Y2="18" StrokeThickness="6" Stroke="White" />
+                <Line x:Name="ScobblerProgress2" X1="0" X2="134" Y1="18" Y2="18" StrokeThickness="6" Stroke="White" />
+                <Line x:Name="ScobblerProgress1" X1="0" X2="50" Y1="18" Y2="18" StrokeThickness="8" Stroke="Lime"/>
                 <Line x:Name="ScobblerLine" X1="0" X2="140" Y1="18" Y2="18" StrokeThickness="36" Stroke="Transparent" PointerPressed="Grid_PointerPressed" PointerMoved="Grid_PointerMoved" PointerReleased="Grid_PointerReleased"/>
             </Grid>
-            <BitmapIcon x:Name="ButtonVolumeUp" Foreground="White" UriSource="ms-appx:///Assets/volume-high.png" Width="36" Height="36" Tag="volume_up" Tapped="BitmapIcon_Tapped" PointerPressed="ButtonPrevious_PointerPressed" PointerExited="ButtonPrevious_PointerExited"/>
+            <BitmapIcon x:Name="ButtonVolumeUp" Foreground="White" Margin="4,0,0,0" UriSource="ms-appx:///Assets/volume-high.png" Width="36" Height="36" Tag="volume_up" Tapped="BitmapIcon_Tapped" PointerPressed="ButtonPrevious_PointerPressed" PointerExited="ButtonPrevious_PointerExited"/>
         </StackPanel>
     </StackPanel>
 </UserControl>

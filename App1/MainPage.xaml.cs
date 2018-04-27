@@ -11,6 +11,7 @@ using Windows.Graphics.Display;
 using Windows.System.Display;
 using Windows.UI;
 using Windows.UI.Core;
+using Windows.UI.Input;
 using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -260,7 +261,7 @@ namespace HashBoard
         /// <param name="e"></param>
         private void PanelElement_Holding(object sender, HoldingRoutedEventArgs e)
         {
-            if (e == null || e.HoldingState == Windows.UI.Input.HoldingState.Completed)
+            if (e == null || e.HoldingState == HoldingState.Completed)
             {
                 PanelData panelData = PanelData.GetPanelData(sender);
 
@@ -270,22 +271,22 @@ namespace HashBoard
 
                     switch (panelData.PopupUserControl)
                     {
-                        case nameof(Hashboard.LightControl):
-                            popupContent = new Hashboard.LightControl(panelData.Entity, panelData.ChildrenEntities);
+                        case nameof(LightControl):
+                            popupContent = new LightControl(panelData.Entity, panelData.ChildrenEntities);
                             break;
 
-                        case nameof(Hashboard.MediaControl):
-                            popupContent = new Hashboard.MediaControl(panelData.Entity);
+                        case nameof(MediaControl):
+                            popupContent = new MediaControl(panelData.Entity);
                             break;
 
-                        case nameof(Hashboard.SettingsControl):
-                            popupContent = new Hashboard.SettingsControl();
+                        case nameof(SettingsControl):
+                            popupContent = new SettingsControl();
                             break;
 
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
-
+                    
                     if (popupContent != null)
                     {
                         Popup popup = new Popup()
@@ -307,12 +308,12 @@ namespace HashBoard
                             }
                         };
 
-                        popup.Loaded += (s, re) =>
+                        popupContent.Loaded += (s, re) =>
                         {
-                            FrameworkElement child = popup.Child as FrameworkElement;
+                            UserControl userControl = s as UserControl;
                             
-                            popup.HorizontalOffset = Window.Current.Bounds.Width / 2 - child.ActualWidth / 2;
-                            popup.VerticalOffset = Window.Current.Bounds.Height / 2 - child.ActualHeight / 2;
+                            popup.HorizontalOffset = Window.Current.Bounds.Width / 2 - userControl.ActualWidth / 2;
+                            popup.VerticalOffset = Window.Current.Bounds.Height / 2 - userControl.ActualHeight / 2;
                         };
 
                         popup.IsOpen = true;
@@ -433,7 +434,7 @@ namespace HashBoard
         {
             WebRequests.SendActionNoData(panelData.Entity.EntityId);
 
-            panelData.Entity.State = GetToggledState(panelData.Entity);
+            panelData.Entity.State = panelData.Entity.GetToggledState();
             panelData.Entity.LastUpdated = DateTime.Now;
 
             UpdateChildPanelIfneeded(panel, new List<Entity>() { panelData.Entity });
@@ -451,12 +452,12 @@ namespace HashBoard
                 WebRequests.SendAction(panelData.ServiceToInvokeOnTap, panelData.ChildrenEntities.Select(x => x.EntityId));
 
                 // Toggle the state of the root and children entities
-                panelData.Entity.State = GetToggledState(panelData.Entity);
+                panelData.Entity.State = panelData.Entity.GetToggledState();
                 panelData.Entity.LastUpdated = DateTime.Now;
 
                 foreach (Entity child in panelData.ChildrenEntities)
                 {
-                    child.State = GetToggledState(child);
+                    child.State = child.GetToggledState();
                     child.LastUpdated = DateTime.Now;
                 }
 
@@ -466,7 +467,7 @@ namespace HashBoard
             {
                 WebRequests.SendAction(panelData.Entity.EntityId, panelData.ServiceToInvokeOnTap);
 
-                panelData.Entity.State = GetToggledState(panelData.Entity);
+                panelData.Entity.State = panelData.Entity.GetToggledState();
                 panelData.Entity.LastUpdated = DateTime.Now;
 
                 UpdateChildPanelIfneeded(panel, new List<Entity>() { panelData.Entity });
@@ -506,7 +507,10 @@ namespace HashBoard
 
                 await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
                 {
-                    UpdateChildPanelIfneeded((FrameworkElement)this.Content, entities);
+                    lock (this.Content)
+                    {
+                        UpdateChildPanelIfneeded((FrameworkElement)this.Content, entities);
+                    }
                 });
             }
             else
@@ -522,6 +526,8 @@ namespace HashBoard
         /// <returns></returns>
         private async Task LoadFrame()
         {
+            ScrollViewer scrollViewer;
+
             if (!string.IsNullOrEmpty(SettingsControl.HomeAssistantHostname))
             {
                 Task<List<Entity>> task = WebRequests.GetData<List<Entity>>("api/states");
@@ -531,11 +537,24 @@ namespace HashBoard
                     this.Content = null;
                 }
 
-                this.Content = CreateViews(await task);
+
+                scrollViewer = CreateViews(await task);
             }
             else
             {
-                this.Content = CreateViews(new List<Entity>());
+                scrollViewer = CreateViews(new List<Entity>());
+            }
+
+            if (null != this.Content)
+            {
+                lock (this.Content)
+                {
+                    this.Content = scrollViewer;
+                }
+            }
+            else
+            {
+                this.Content = scrollViewer;
             }
         }
 
@@ -559,9 +578,13 @@ namespace HashBoard
 
                     List<Entity> allEntities = await task;
 
-                    await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+                    await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                     {
-                        UpdateChildPanelIfneeded((FrameworkElement)this.Content, allEntities);
+                        // Shared resource
+                        lock (this.Content)
+                        {
+                            UpdateChildPanelIfneeded((FrameworkElement)this.Content, allEntities);
+                        }
                     });
                 }
 
@@ -785,31 +808,6 @@ namespace HashBoard
             return customEntity.CreatePanel(entity);
         }
 
-        private string GetToggledState(Entity entity)
-        {
-            switch (entity.State)
-            {
-                case "true":
-                    return "false";
-                case "false":
-                    return "true";
-                case "on":
-                    return "off";
-                case "off":
-                    return "on";
-                case "playing":
-                    return "paused";
-                case "paused":
-                    return "playing";
-                case "1":
-                    return "0";
-                case "0":
-                    return "1";
-
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
 
         //private void MainPage_Tapped(object sender, PointerRoutedEventArgs e)
         //{

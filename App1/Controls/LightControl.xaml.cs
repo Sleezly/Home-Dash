@@ -1,18 +1,15 @@
 ﻿using HashBoard;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
 using Windows.Foundation;
-using Windows.System.Threading;
 using Windows.UI;
-using Windows.UI.Core;
 using Windows.UI.Input;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Shapes;
-using System.Linq;
 
 namespace Hashboard
 {
@@ -22,9 +19,13 @@ namespace Hashboard
 
         private const int MaximumColorTemperature = 500;
 
+        private RGB CurrentColor = new RGB(255);
+
         private Entity PanelEntity;
 
         private IEnumerable<Entity> ChildrenEntities;
+
+        private enum ButtonState { NotPressed, Pressed }
 
         public LightControl(Entity entity, IEnumerable<Entity> childrenEntities)
         {
@@ -35,9 +36,12 @@ namespace Hashboard
 
             DrawColorWheel();
 
-            UpdateUI();
+            InitializeUI();
         }
 
+        /// <summary>
+        /// Renders a beautiful color wheel with touch-enabled events from each gradient-blended line.
+        /// </summary>
         private void DrawColorWheel()
         {
             Grid canvas = this.FindName("ColorWheel") as Grid;
@@ -45,30 +49,41 @@ namespace Hashboard
             for (int i = 0; i < 360; i++)
             {
                 RotateTransform rt = new RotateTransform() { Angle = i };
-
                 LinearGradientBrush lgb = new LinearGradientBrush();
-                lgb.GradientStops.Add(new GradientStop() { Color = Colors.White });
-                lgb.GradientStops.Add(new GradientStop() { Color = ColorConverter.HSVtoRGB(i, 1, 1), Offset = 1 });
+                Line line = new Line() { X1 = 0, Y1 = 0, X2 = canvas.Width / 2, Y2 = 0, StrokeThickness = 6, RenderTransform = rt};
 
-                Line line = new Line() { X1 = 0, Y1 = 0, X2 = canvas.Width / 2, Y2 = 0, StrokeThickness = 6, RenderTransform = rt, Stroke = lgb };
+                // Only allow interaction with the color wheel when color behavior is supported. To signify the color wheel
+                // is disabled, also add a gray-tone to the colors.
+                if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == EntityExtensions.SupportedFeatures.Colors)
+                {
+                    line.Tapped += ColorWheelLine_Tapped;
+                    line.PointerMoved += ColorWheelLine_PointerMoved;
+
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.White });
+                    lgb.GradientStops.Add(new GradientStop() { Color = ColorConverter.HSVtoRGB(i, 1, 1), Offset = 1 });
+                }
+                else
+                {
+                    lgb.GradientStops.Add(new GradientStop() { Color = Color.FromArgb(255, 225, 225, 225) });
+                    lgb.GradientStops.Add(new GradientStop() { Color = Color.FromArgb(255, 50, 50, 50), Offset = 1 });
+                }
+
+                line.Stroke = lgb;
                 line.Margin = new Thickness(canvas.Width / 2, canvas.Width / 2, 0, 0);
                 line.HorizontalAlignment = HorizontalAlignment.Left;
                 line.VerticalAlignment = VerticalAlignment.Top;
-
-                line.Tapped += ColorWheelLine_Tapped;
-                line.PointerMoved += ColorWheelLine_PointerMoved;
 
                 canvas.Children.Add(line);
             }
         }
 
-        private void UpdateUI()
+        /// <summary>
+        /// Render all UI.
+        /// </summary>
+        private void InitializeUI()
         {
-            if (!string.Equals(PanelEntity.State, "on", StringComparison.InvariantCultureIgnoreCase))
-            {
-                BitmapIcon bitmapIcon = this.FindName("ButtonPower") as BitmapIcon;
-                bitmapIcon.Foreground = new SolidColorBrush(Colors.Gray);
-            }
+            // Power Button
+            ShowHightlightColor(ButtonState.NotPressed);
 
             if (PanelEntity.Attributes.ContainsKey("friendly_name"))
             {
@@ -76,9 +91,11 @@ namespace Hashboard
                 textBlock.Text = PanelEntity.Attributes["friendly_name"];
             }
 
-            // Check for groups
+            // For the group panel, average the color of children entities together
             if (ChildrenEntities != null)
             {
+                // Set the color adjustment sliders and color wheel by blending the average
+                // color for each. Include entities which are in the On state only.
                 IEnumerable<Entity> onEntities = ChildrenEntities.Where(x => string.Equals(x.State, "on", StringComparison.InvariantCultureIgnoreCase));
 
                 if (onEntities.Any())
@@ -237,16 +254,20 @@ namespace Hashboard
             double x = pointFromLine.X;
             double percentage = 1.0 - x / line.ActualWidth;
 
-            RGB rgb = RGB.GetBlendedColor(percentage, colorStart, colorEnd);
+            CurrentColor = RGB.GetBlendedColor(percentage, colorStart, colorEnd);
 
-            ellipse.Fill = rgb.CreateSolidColorBrush();
+            ellipse.Fill = CurrentColor.CreateSolidColorBrush();
 
             ellipse.Margin = new Thickness(
                 pointFromParent.X - marginFromParent.Left / 2,
                 pointFromParent.Y - marginFromParent.Top / 2,
                 0, 0);
 
-            SendColorUpdate(rgb);
+            SendColorUpdate(CurrentColor);
+
+            // Update the power button color as well
+            PanelEntity.State = "on";
+            ShowHightlightColor(ButtonState.NotPressed);
         }
 
         /// <summary>
@@ -349,6 +370,10 @@ namespace Hashboard
             ellipse.Fill = RGB.GetBlendedColor(percentage, Colors.DarkSlateGray, Colors.LightGray).CreateSolidColorBrush();
             ellipse.Margin = new Thickness(
                 (1.0 - percentage) * rectangle.Width + offset, 0, 0, 0);
+
+            // Update the power button color as well
+            PanelEntity.State = "on";
+            ShowHightlightColor(ButtonState.NotPressed);
         }
 
         /// <summary>
@@ -369,22 +394,24 @@ namespace Hashboard
             double percentage = (double)(colorTemperature - MinimumColorTemperature) / (double)(MaximumColorTemperature - MinimumColorTemperature);
             double offset = (grid.Width - rectangle.Width) / 2 - (ellipse.Width / 2);
 
-            ellipse.Fill = RGB.GetBlendedColor(percentage, Colors.Gold, Colors.LightCyan).CreateSolidColorBrush();
+            CurrentColor = RGB.GetBlendedColor(percentage, Colors.Gold, Colors.LightCyan);
+
+            ellipse.Fill = CurrentColor.CreateSolidColorBrush();
             ellipse.Margin = new Thickness(
                 (1.0 - percentage) * rectangle.Width + offset, 0, 0, 0);
+
+            // Update the power button color as well
+            PanelEntity.State = "on";
+            ShowHightlightColor(ButtonState.NotPressed);
         }
 
         /// <summary>
-        /// Toggles the Power Button
+        /// Toggles the Power Button and change the color to match the new toggled state.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private void PowerButton_Tapped(object sender, TappedRoutedEventArgs e)
         {
-            BitmapIcon bitmapIcon = sender as BitmapIcon;
-
-            bitmapIcon.Foreground = new SolidColorBrush(Colors.White);
-
             if (ChildrenEntities != null)
             {
                 WebRequests.SendAction("toggle", ChildrenEntities.Select(x => x.EntityId));
@@ -393,18 +420,63 @@ namespace Hashboard
             {
                 WebRequests.SendAction(PanelEntity.EntityId, "toggle");
             }
+
+            PanelEntity.State = PanelEntity.GetToggledState();
+
+            ShowHightlightColor(ButtonState.NotPressed);
         }
 
+        /// <summary>
+        /// Dim the power button.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void PowerButton_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            BitmapIcon bitmapIcon = sender as BitmapIcon;
-            bitmapIcon.Foreground = new SolidColorBrush(Colors.DarkGray);
+            ShowHightlightColor(ButtonState.Pressed);
         }
 
+        /// <summary>
+        /// Cancel a dimming of the power button.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void PowerButton_PointerExited(object sender, PointerRoutedEventArgs e)
         {
-            BitmapIcon bitmapIcon = sender as BitmapIcon;
-            bitmapIcon.Foreground = new SolidColorBrush(Colors.White);
+            ShowHightlightColor(ButtonState.NotPressed);
+        }
+
+        /// <summary>
+        /// Colors the power button with the provided highlight.
+        /// </summary>
+        /// <param name=""></param>
+        private void ShowHightlightColor(ButtonState powerButtonState)
+        {
+            // Entity name should always be colored to match current color
+            TextBlock textBlock = FindName("DeviceText") as TextBlock;
+            textBlock.Foreground = CurrentColor.CreateSolidColorBrush();
+
+            // Power button should also match but only when enabled and not in a pressed state
+            BitmapIcon bitmapIcon = this.FindName("ButtonPower") as BitmapIcon;
+
+            if (powerButtonState == ButtonState.NotPressed)
+            {
+                if (string.Equals(PanelEntity.State, "on", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    // On
+                    bitmapIcon.Foreground = CurrentColor.CreateSolidColorBrush();
+                }
+                else
+                {
+                    // Off
+                    bitmapIcon.Foreground = new SolidColorBrush(Colors.DarkGray);
+                }
+            }
+            else
+            {
+                // Pressed
+                bitmapIcon.Foreground = new SolidColorBrush(Colors.Gray);
+            }
         }
 
         /// <summary>
@@ -489,7 +561,10 @@ namespace Hashboard
         /// <param name="e"></param>
         private void ColorWheelGrid_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            ShowColorWheelCircle(Visibility.Collapsed);
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == EntityExtensions.SupportedFeatures.Colors)
+            {
+                ShowColorWheelCircle(Visibility.Collapsed);
+            }
         }
 
         /// <summary>
@@ -499,7 +574,10 @@ namespace Hashboard
         /// <param name="e"></param>
         private void ColorWheelGrid_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            ShowColorWheelCircle(Visibility.Visible);
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == EntityExtensions.SupportedFeatures.Colors)
+            {
+                ShowColorWheelCircle(Visibility.Visible);
+            }
         }
 
         /// <summary>
@@ -509,78 +587,105 @@ namespace Hashboard
         /// <param name="e"></param>
         private void ColorWheelGrid_PointerExited(object sender, PointerRoutedEventArgs e)
         {
-            if (e.Pointer.IsInContact)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == EntityExtensions.SupportedFeatures.Colors)
             {
-                ShowColorWheelCircle(Visibility.Visible);
+                if (e.Pointer.IsInContact)
+                {
+                    ShowColorWheelCircle(Visibility.Visible);
+                }
             }
         }
 
         private void ColorTemperature_Tapped(object sender, TappedRoutedEventArgs e)
         {
-            ShowColorTemperatureCircle(Visibility.Visible);
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
+            {
+                ShowColorTemperatureCircle(Visibility.Visible);
 
-            Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
-            double percentage = 1.0 - e.GetPosition(rectangle).X / rectangle.Width;
-  
-            SetColorTemperature(percentage);
+                Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
+                double percentage = 1.0 - e.GetPosition(rectangle).X / rectangle.Width;
+
+                SetColorTemperature(percentage);
+            }
         }
 
         private void ColorTemperature_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            ShowColorTemperatureCircle(Visibility.Collapsed);
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
+            {
+                ShowColorTemperatureCircle(Visibility.Collapsed);
+            }
         }
 
         private void ColorTemperature_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            ShowColorTemperatureCircle(Visibility.Visible);
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
+            {
+                ShowColorTemperatureCircle(Visibility.Visible);
+            }
         }
 
         private void ColorTemperature_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
-            if (e.Pointer.IsInContact)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
             {
-                Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
-                double percentage = 1.0 - e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
+                if (e.Pointer.IsInContact)
+                {
+                    Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
+                    double percentage = 1.0 - e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
 
-                SetColorTemperature(percentage);
+                    //SetColorTemperature(percentage);
+                }
             }
         }
 
         private void ColorTemperature_PointerExited(object sender, PointerRoutedEventArgs e)
         {
-            if (e.Pointer.IsInContact)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
             {
-                Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
-                double percentage = 1.0 - e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
+                if (e.Pointer.IsInContact)
+                {
+                    Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
+                    double percentage = 1.0 - e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
 
-                SetColorTemperature(percentage);
+                    SetColorTemperature(percentage);
 
-                ShowColorTemperatureCircle(Visibility.Visible);
+                    ShowColorTemperatureCircle(Visibility.Visible);
+                }
             }
         }
 
         private void SetColorTemperature(double percentage)
         {
-            int temperature = Convert.ToInt32((MaximumColorTemperature - MinimumColorTemperature) * percentage + MinimumColorTemperature);
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
+            {
+                int temperature = Convert.ToInt32((MaximumColorTemperature - MinimumColorTemperature) * percentage + MinimumColorTemperature);
 
-            UpdateColorTemperatureControl(temperature);
+                UpdateColorTemperatureControl(temperature);
 
-            SendColorTemperatureUpdate(temperature);
+                SendColorTemperatureUpdate(temperature);
+            }
         }
 
         private void ColorTemperatureCircle_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            if (e.Pointer.IsInContact)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
             {
-                ShowColorTemperatureCircle(Visibility.Collapsed);
+                if (e.Pointer.IsInContact)
+                {
+                    ShowColorTemperatureCircle(Visibility.Collapsed);
+                }
             }
         }
 
         private void ColorTemperatureCircle_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
-            if (e.Pointer.IsInContact)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
             {
-                ShowColorTemperatureCircle(Visibility.Collapsed);
+                if (e.Pointer.IsInContact)
+                {
+                    ShowColorTemperatureCircle(Visibility.Collapsed);
+                }
             }
         }
 
@@ -604,7 +709,6 @@ namespace Hashboard
         {
             Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
             ellipse.Visibility = Visibility.Collapsed;
-
         }
 
         private void Brightness_PointerReleased(object sender, PointerRoutedEventArgs e)
@@ -625,7 +729,7 @@ namespace Hashboard
 
                 UpdateBrightnessControl(255 * percentage);
 
-                SendBrightnessUpdate(255 * percentage);
+                //SendBrightnessUpdate(255 * percentage);
             }
         }
 

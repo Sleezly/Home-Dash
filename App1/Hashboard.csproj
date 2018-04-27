@@ -105,6 +105,7 @@
     <Compile Include="Controls\MediaControl.xaml.cs">
       <DependentUpon>MediaControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Extensions\EntityExtensions.cs" />
     <Compile Include="MqttSubscriber.cs" />
     <Compile Include="Panel Builders\DateTimePanelBuilder.cs" />
     <Compile Include="Panel Builders\MediaPlayerPanelBuilder.cs" />
