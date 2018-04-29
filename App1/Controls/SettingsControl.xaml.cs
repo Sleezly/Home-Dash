@@ -14,6 +14,8 @@ namespace Hashboard
         {
             this.InitializeComponent();
 
+            this.RequestedTheme = ThemeControl.GetApplicationTheme();
+
             if (null != HomeAssistantHostname)
             {
                 TextBox homeAssistantHostname = this.FindName("HomeAssistantHostnameText") as TextBox;

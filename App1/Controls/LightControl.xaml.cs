@@ -31,6 +31,8 @@ namespace Hashboard
         {
             this.InitializeComponent();
 
+            this.RequestedTheme = ThemeControl.GetApplicationTheme();
+
             PanelEntity = entity;
             ChildrenEntities = childrenEntities;
 
@@ -64,7 +66,7 @@ namespace Hashboard
                 }
                 else
                 {
-                    lgb.GradientStops.Add(new GradientStop() { Color = Color.FromArgb(255, 225, 225, 225) });
+                    lgb.GradientStops.Add(new GradientStop() { Color = Color.FromArgb(255, 125, 125, 125) });
                     lgb.GradientStops.Add(new GradientStop() { Color = Color.FromArgb(255, 50, 50, 50), Offset = 1 });
                 }
 
@@ -82,9 +84,6 @@ namespace Hashboard
         /// </summary>
         private void InitializeUI()
         {
-            // Power Button
-            ShowHightlightColor(ButtonState.NotPressed);
-
             if (PanelEntity.Attributes.ContainsKey("friendly_name"))
             {
                 TextBlock textBlock = FindName("DeviceText") as TextBlock;
@@ -207,6 +206,16 @@ namespace Hashboard
                     ShowColorWheelCircle(Visibility.Collapsed);
                 }
             }
+
+            // ColorTemperature should be a constant yellowish-hue line for brightness-only lights
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == EntityExtensions.SupportedFeatures.BrightnessOnly)
+            {
+                Rectangle colorTemperature = this.FindName("ColorTemperature") as Rectangle;
+                colorTemperature.Fill = new SolidColorBrush(Colors.LightYellow);
+            }
+
+            // Update the power button last so as to render with any color updates
+            ShowHightlightColor(ButtonState.NotPressed);
         }
 
         /// <summary>
@@ -220,12 +229,13 @@ namespace Hashboard
 
             HSV hsv = ColorConverter.RGBtoHSV(rgb);
 
-            Line line = grid.Children[(int)hsv.H] as Line;
-
             double angle = (Math.PI / 180) * hsv.H;
             double radian = (grid.Width / 2) * hsv.S;
             double x = radian * Math.Cos(angle);
             double y = radian * Math.Sin(angle);
+
+            // UI elements to have new color value
+            CurrentColor = rgb;
 
             ellipse.Fill = rgb.CreateSolidColorBrush();
 
@@ -254,15 +264,14 @@ namespace Hashboard
             double x = pointFromLine.X;
             double percentage = 1.0 - x / line.ActualWidth;
 
-            CurrentColor = RGB.GetBlendedColor(percentage, colorStart, colorEnd);
+            // Get the linear blended average color calculation
+            RGB rgb = RGB.GetLinearBlendedColor(percentage, colorStart, colorEnd);
 
-            ellipse.Fill = CurrentColor.CreateSolidColorBrush();
+            // Use the same calculation to place the circle via-RGB as we do for cursor placement as this guarantees
+            // both methods to place the ellipse generate the same result.
+            SetColorCircleLocationAndColor(rgb);
 
-            ellipse.Margin = new Thickness(
-                pointFromParent.X - marginFromParent.Left / 2,
-                pointFromParent.Y - marginFromParent.Top / 2,
-                0, 0);
-
+            // Send the RGB update via REST API
             SendColorUpdate(CurrentColor);
 
             // Update the power button color as well
@@ -452,9 +461,12 @@ namespace Hashboard
         /// <param name=""></param>
         private void ShowHightlightColor(ButtonState powerButtonState)
         {
-            // Entity name should always be colored to match current color
-            TextBlock textBlock = FindName("DeviceText") as TextBlock;
-            textBlock.Foreground = CurrentColor.CreateSolidColorBrush();
+            // Entity name should match current color for Dark theme only
+            if (RequestedTheme == ElementTheme.Dark)
+            {
+                TextBlock textBlock = FindName("DeviceText") as TextBlock;
+                textBlock.Foreground = CurrentColor.CreateSolidColorBrush();
+            }
 
             // Power button should also match but only when enabled and not in a pressed state
             BitmapIcon bitmapIcon = this.FindName("ButtonPower") as BitmapIcon;
@@ -464,7 +476,15 @@ namespace Hashboard
                 if (string.Equals(PanelEntity.State, "on", StringComparison.InvariantCultureIgnoreCase))
                 {
                     // On
-                    bitmapIcon.Foreground = CurrentColor.CreateSolidColorBrush();
+                    if (RequestedTheme == ElementTheme.Dark)
+                    {
+                        bitmapIcon.Foreground = CurrentColor.CreateSolidColorBrush();
+                    }
+                    else
+                    {
+                        // Button will not be visible while in Light theme so simply use Foreground color here.
+                        bitmapIcon.Foreground = this.Foreground;
+                    }
                 }
                 else
                 {
@@ -627,32 +647,32 @@ namespace Hashboard
 
         private void ColorTemperature_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
-            {
-                if (e.Pointer.IsInContact)
-                {
-                    Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
-                    double percentage = 1.0 - e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
+            //if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
+            //{
+            //    if (e.Pointer.IsInContact)
+            //    {
+            //        Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
+            //        double percentage = 1.0 - e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
 
-                    //SetColorTemperature(percentage);
-                }
-            }
+            //        //SetColorTemperature(percentage);
+            //    }
+            //}
         }
 
         private void ColorTemperature_PointerExited(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
-            {
-                if (e.Pointer.IsInContact)
-                {
-                    Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
-                    double percentage = 1.0 - e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
+            //if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
+            //{
+            //    if (e.Pointer.IsInContact)
+            //    {
+            //        Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
+            //        double percentage = 1.0 - e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
 
-                    SetColorTemperature(percentage);
+            //        SetColorTemperature(percentage);
 
-                    ShowColorTemperatureCircle(Visibility.Visible);
-                }
-            }
+            //        ShowColorTemperatureCircle(Visibility.Visible);
+            //    }
+            //}
         }
 
         private void SetColorTemperature(double percentage)
@@ -719,34 +739,34 @@ namespace Hashboard
 
         private void Brightness_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
-            if (e.Pointer.IsInContact)
-            {
-                Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
-                ellipse.Visibility = Visibility.Collapsed;
+            //if (e.Pointer.IsInContact)
+            //{
+            //    Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
+            //    ellipse.Visibility = Visibility.Collapsed;
 
-                Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
-                double percentage = e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
+            //    Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
+            //    double percentage = e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
 
-                UpdateBrightnessControl(255 * percentage);
+            //    UpdateBrightnessControl(255 * percentage);
 
-                //SendBrightnessUpdate(255 * percentage);
-            }
+            //    //SendBrightnessUpdate(255 * percentage);
+            //}
         }
 
         private void Brightness_PointerExited(object sender, PointerRoutedEventArgs e)
         {
-            if (e.Pointer.IsInContact)
-            {
-                Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
-                ellipse.Visibility = Visibility.Visible;
+            //if (e.Pointer.IsInContact)
+            //{
+            //    Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
+            //    ellipse.Visibility = Visibility.Visible;
 
-                Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
-                double percentage = e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
+            //    Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
+            //    double percentage = e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
 
-                UpdateBrightnessControl(255 * percentage);
+            //    UpdateBrightnessControl(255 * percentage);
 
-                SendBrightnessUpdate(255 * percentage);
-            }
+            //    SendBrightnessUpdate(255 * percentage);
+            //}
         }
 
         private void BrightnessCircle_PointerMoved(object sender, PointerRoutedEventArgs e)

@@ -28,15 +28,13 @@ namespace HashBoard
     /// </summary>
     public sealed partial class MainPage : Page
     {
-        //public const string Host = "hassio.local";
-
-        //public const string Port = "8123";
-
-        //public const string ApiPassword = "api_password=yavin333";
-
         private const int LightSensorReadingRateInMs = 5000;
 
-        private const string SettingsMenuPanelName = "settingsmenu";
+        private const string CustomgroupPanelName = "customstaticgroup";
+
+        private const string SettingsControlPanelName = "settingscontrol";
+
+        private const string ThemeControlMenuPanelName = "themecontrol";
 
         private DateTime MousePressStartTime;
 
@@ -44,12 +42,7 @@ namespace HashBoard
 
         private CancellationTokenSource cancellationTokenSource;
 
-        //private CancellationTokenSource cancellationTokenSourceContentDialog;
-
         // Pxoximity sensors
-        //private ProximitySensor sensor;
-        //private ProximitySensorDisplayOnOffController displayController;
-        //private Windows.Devices.Enumeration.DeviceWatcher watcher;
         private DisplayRequest DisplayRequestSetting = new DisplayRequest();
         private BrightnessOverride BrightnessOverrideSetting;
         private LightSensor LightSensorSetting;
@@ -57,9 +50,27 @@ namespace HashBoard
 
         MqttSubscriber mqttSubscriber;
 
+        /// <summary>
+        /// List of custom controls which can be opned as a Popup via Tap or Tap+Hold actions on a Panel.
+        /// </summary>
+        private List<string> popupUserControlList = new List<string>()
+        {
+            nameof(MediaControl),
+            nameof(LightControl),
+            nameof(ClimateControl),
+            nameof(SettingsControl),
+            nameof(ThemeControl),
+        };
+
         public MainPage()
         {
             this.InitializeComponent();
+
+            this.RequestedTheme = ThemeControl.GetApplicationTheme();
+
+            //ShowMainPageBackground();
+            ScrollViewer scrollViewer = this.FindName("MainScrollView") as ScrollViewer;
+            scrollViewer.Background = ThemeControl.BackgroundBrush;
 
             LoadEntityHandler();
         }
@@ -71,15 +82,10 @@ namespace HashBoard
             // Keep the display in the On state while the app is running
             DisplayRequestSetting.RequestActive();
 
-            //watcher = Windows.Devices.Enumeration.DeviceInformation.CreateWatcher(ProximitySensor.GetDeviceSelector());
-            //watcher.Added += OnProximitySensorAdded;
-            //watcher.Start();
-
             // Get capability to dim and brighten the display when needed
             BrightnessOverrideSetting = BrightnessOverride.GetForCurrentView();
             if (BrightnessOverrideSetting.IsSupported)
             {
-                //brightnessOverride.SetBrightnessLevel(1.0, DisplayBrightnessOverrideOptions.None);
                 BrightnessOverrideSetting.StartOverride();
             }
 
@@ -129,43 +135,11 @@ namespace HashBoard
         }
 
         /// <summary>
-        /// Invoked when the device watcher finds a proximity sensor.
-        /// </summary>
-        /// <param name="sender">The device watcher</param>
-        /// <param name="device">Device information for the proximity sensor that was found</param>
-        //private async void OnProximitySensorAdded(Windows.Devices.Enumeration.DeviceWatcher sender, Windows.Devices.Enumeration.DeviceInformation device)
-        //{
-        //    if (null == sensor)
-        //    {
-        //        ProximitySensor foundSensor = ProximitySensor.FromId(device.Id);
-
-        //        if (null != foundSensor)
-        //        {
-        //            sensor = foundSensor;
-
-        //            displayController = sensor.CreateDisplayOnOffController();
-        //        }
-        //        else
-        //        {
-        //            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-        //            {
-        //                Debug.WriteLine("Could not get a proximity sensor from the device id");
-        //            });
-        //        }
-        //    }
-        //}
-
-        /// <summary>
         /// Invoked immediately before the Page is unloaded and is no longer the current source of a parent Frame.
         /// </summary>
         /// <param name="e"></param>
         protected override void OnNavigatingFrom(NavigatingCancelEventArgs e)
         {
-            //if (displayController != null)
-            //{
-            //    displayController.Dispose();
-            //    displayController = null;
-            //}
             DisplayRequestSetting.RequestRelease();
 
             base.OnNavigatingFrom(e);
@@ -197,13 +171,19 @@ namespace HashBoard
 
                 new GenericPanelBuilder() {
                     EntityIdStartsWith = "climate.",
-                    ValueTextFromAttributeOverride = "current_temperature" },
+                    //HoldEventAction = nameof(ClimateControl),
+                    TapEventAction = nameof(ClimateControl),
+                    ValueTextFromAttributeOverride = "current_temperature",
+                    TapEventHandler = PanelElement_Tapped,
+                    //HoldEventHandler = PanelElement_Holding,
+                    PressedEventHandler = PanelElement_PointerPressed,
+                    ReleasedEventHandler = PanelElement_PointerExited},
 
                 new MediaPlayerPanelBuilder() {
                     EntityIdStartsWith = "media_player.",
                     TapEventAction = "media_play_pause",
                     Size = EntitySize.Normal,
-                    EntityPopupControl = nameof(Hashboard.MediaControl),
+                    HoldEventAction = nameof(MediaControl),
                     TapEventHandler = PanelElement_Tapped,
                     HoldEventHandler = PanelElement_Holding,
                     PressedEventHandler = PanelElement_PointerPressed,
@@ -212,7 +192,7 @@ namespace HashBoard
                 new LightPanelBuilder() {
                     EntityIdStartsWith = "light.",
                     TapEventAction = "toggle",
-                    EntityPopupControl = nameof(Hashboard.LightControl),
+                    HoldEventAction = nameof(LightControl),
                     TapEventHandler = PanelElement_Tapped,
                     HoldEventHandler = PanelElement_Holding,
                     PressedEventHandler = PanelElement_PointerPressed,
@@ -221,7 +201,7 @@ namespace HashBoard
                 new NameOnlyPanelBuilder() {
                     EntityIdStartsWith = "script.",
                     TapEventHandler = PanelElement_Tapped,
-                    HoldEventHandler = PanelElement_Holding,
+                    //HoldEventHandler = PanelElement_Holding,
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
 
@@ -229,27 +209,33 @@ namespace HashBoard
                     EntityIdStartsWith = "switch.",
                     TapEventAction = "toggle",
                     TapEventHandler = PanelElement_Tapped,
-                    HoldEventHandler = PanelElement_Holding,
+                    //HoldEventHandler = PanelElement_Holding,
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
 
                 new GenericPanelBuilder() {
                     EntityIdStartsWith = "automation.",
                     TapEventAction = "activate",
+                    HoldEventAction = "toggle",
                     TapEventHandler = PanelElement_Tapped,
                     HoldEventHandler = PanelElement_Holding,
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
 
                 new NameOnlyPanelBuilder() {
-                    EntityIdStartsWith = $"{SettingsMenuPanelName}.",
-                    EntityPopupControl = nameof(Hashboard.SettingsControl),
-                    TapEventAction = nameof(Hashboard.SettingsControl),
+                    EntityIdStartsWith = $"{SettingsControlPanelName}.",
+                    TapEventAction = nameof(SettingsControl),
                     TapEventHandler = PanelElement_Tapped,
-                    HoldEventHandler = PanelElement_Holding,
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
-                
+
+                new NameOnlyPanelBuilder() {
+                    EntityIdStartsWith = $"{ThemeControlMenuPanelName}.",
+                    TapEventAction = nameof(ThemeControl),
+                    TapEventHandler = PanelElement_Tapped,
+                    PressedEventHandler = PanelElement_PointerPressed,
+                    ReleasedEventHandler = PanelElement_PointerExited},
+
                 new GenericPanelBuilder() { EntityIdStartsWith = string.Empty },
             };
         }
@@ -257,69 +243,83 @@ namespace HashBoard
         /// <summary>
         /// Show the PopUp custom UI.
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void PanelElement_Holding(object sender, HoldingRoutedEventArgs e)
+        private void ShowPopupControl(string popupControl, Entity entity, IEnumerable<Entity> childrenEntities = null)
         {
-            if (e == null || e.HoldingState == HoldingState.Completed)
+            UserControl popupContent;
+
+            switch (popupControl)
             {
-                PanelData panelData = PanelData.GetPanelData(sender);
+                case nameof(LightControl):
+                    popupContent = new LightControl(entity, childrenEntities);
+                    break;
 
-                if (panelData.PopupUserControl != null)
-                {
-                    UserControl popupContent;
+                case nameof(MediaControl):
+                    popupContent = new MediaControl(entity);
+                    break;
 
-                    switch (panelData.PopupUserControl)
-                    {
-                        case nameof(LightControl):
-                            popupContent = new LightControl(panelData.Entity, panelData.ChildrenEntities);
-                            break;
+                case nameof(SettingsControl):
+                    popupContent = new SettingsControl();
+                    break;
 
-                        case nameof(MediaControl):
-                            popupContent = new MediaControl(panelData.Entity);
-                            break;
+                case nameof(ClimateControl):
+                    popupContent = new ClimateControl(entity);
+                    break;
 
-                        case nameof(SettingsControl):
-                            popupContent = new SettingsControl();
-                            break;
+                case nameof(ThemeControl):
+                    popupContent = new ThemeControl(ShowMainPageBackground);
+                    break;
 
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                    
-                    if (popupContent != null)
-                    {
-                        Popup popup = new Popup()
-                        {
-                            IsLightDismissEnabled = true,
-                            LightDismissOverlayMode = LightDismissOverlayMode.On,
-                            Child = popupContent,
-                        };
-
-                        popup.Closed += async (s, re) =>
-                        {
-                            if (popup.Child is SettingsControl)
-                            {
-                                await LoadFrame();
-
-                                StartPollingThread();
-
-                                StartMqttSubscriber();
-                            }
-                        };
-
-                        popupContent.Loaded += (s, re) =>
-                        {
-                            UserControl userControl = s as UserControl;
-                            
-                            popup.HorizontalOffset = Window.Current.Bounds.Width / 2 - userControl.ActualWidth / 2;
-                            popup.VerticalOffset = Window.Current.Bounds.Height / 2 - userControl.ActualHeight / 2;
-                        };
-
-                        popup.IsOpen = true;
-                    }
-                }
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
+
+            if (popupContent != null)
+            {
+                Popup popup = new Popup()
+                {
+                    IsLightDismissEnabled = true,
+                    LightDismissOverlayMode = LightDismissOverlayMode.On,
+                    Child = popupContent,
+                };
+
+                popup.Closed += async (s, re) =>
+                {
+                    if (popup.Child is SettingsControl)
+                    {
+                        await LoadFrame();
+
+                        StartPollingThread();
+
+                        StartMqttSubscriber();
+                    }
+
+                    if (popup.Child is ThemeControl)
+                    {
+                        this.RequestedTheme = ThemeControl.GetApplicationTheme();
+                    }
+                };
+
+                popupContent.Loaded += (s, re) =>
+                {
+                    UserControl userControl = s as UserControl;
+
+                    popup.HorizontalOffset = Window.Current.Bounds.Width / 2 - userControl.ActualWidth / 2;
+                    popup.VerticalOffset = Window.Current.Bounds.Height / 2 - userControl.ActualHeight / 2;
+                };
+
+                popup.IsOpen = true;
+            }
+        }
+
+        /// <summary>
+        /// Updates the main background brush using theme resource.
+        /// </summary>
+        private async void ShowMainPageBackground()
+        {
+            ScrollViewer scrollViewer = this.FindName("MainScrollView") as ScrollViewer;
+            scrollViewer.Background = ThemeControl.BackgroundBrush;
+
+            await LoadFrame();
         }
 
         /// <summary>
@@ -398,33 +398,59 @@ namespace HashBoard
             }
         }
 
-        private void PanelElement_Tapped(object sender, TappedRoutedEventArgs e)
+        private void PanelElement_Holding(object sender, HoldingRoutedEventArgs e)
         {
-            DateTime now = DateTime.Now;
-
-            if (MousePressStartTime + TimeSpan.FromSeconds(3) > now &&
-                MousePressStartTime + TimeSpan.FromMilliseconds(300) < now)
-            {
-                PanelElement_Holding(sender, null);
-            }
-            else
+            if (e == null || e.HoldingState == HoldingState.Completed)
             {
                 PanelData panelData = PanelData.GetPanelData(sender);
 
-                // Tap
-                if (string.IsNullOrEmpty(panelData.ServiceToInvokeOnTap))
+                if (string.IsNullOrEmpty(panelData.ActionToInvokeOnHold))
+                {
+                    SendPanelDataSimple((Panel)sender, panelData);
+                }
+                else
+                { 
+                    if (popupUserControlList.Any(x => string.Equals(x, panelData.ActionToInvokeOnHold, StringComparison.InvariantCultureIgnoreCase)))
+                    {
+                        ShowPopupControl(panelData.ActionToInvokeOnHold, panelData.Entity, panelData.ChildrenEntities);
+                    }
+                    else
+                    {
+                        SendPanelDataWithJson((Panel)sender, panelData, panelData.ActionToInvokeOnHold);
+                    }
+                }
+            }
+        }
+
+        private void PanelElement_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            PanelData panelData = PanelData.GetPanelData(sender);
+
+            if (MousePressStartTime + TimeSpan.FromSeconds(3) > DateTime.Now &&
+                MousePressStartTime + TimeSpan.FromMilliseconds(300) < DateTime.Now)
+            {
+                if (!string.IsNullOrEmpty(panelData.ActionToInvokeOnHold))
+                {
+                    // Simulate tap + hold when using the mouse
+                    PanelElement_Holding(sender, null);
+                }
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(panelData.ActionToInvokeOnTap))
                 {
                     SendPanelDataSimple((Panel)sender, panelData);
                 }
                 else
                 {
-                    if (string.Equals(panelData.ServiceToInvokeOnTap, nameof(SettingsControl), StringComparison.InvariantCultureIgnoreCase))
+                    // Reroute tap actions to launch a custom control panel when the requested name matches a named Popup control
+                    if (popupUserControlList.Any(x => string.Equals(x, panelData.ActionToInvokeOnTap, StringComparison.InvariantCultureIgnoreCase)))
                     {
-                        PanelElement_Holding(sender, null);
+                        ShowPopupControl(panelData.ActionToInvokeOnTap, panelData.Entity, panelData.ChildrenEntities);
                     }
                     else
                     {
-                        SendPanelDataWithJson((Panel)sender, panelData);
+                        SendPanelDataWithJson((Panel)sender, panelData, panelData.ActionToInvokeOnTap);
                     }
                 }
             }
@@ -434,7 +460,7 @@ namespace HashBoard
         {
             WebRequests.SendActionNoData(panelData.Entity.EntityId);
 
-            panelData.Entity.State = panelData.Entity.GetToggledState();
+            panelData.Entity.State = "updating...";// panelData.Entity.GetToggledState();
             panelData.Entity.LastUpdated = DateTime.Now;
 
             UpdateChildPanelIfneeded(panel, new List<Entity>() { panelData.Entity });
@@ -445,19 +471,20 @@ namespace HashBoard
         /// </summary>
         /// <param name="panel"></param>
         /// <param name="panelData"></param>
-        private void SendPanelDataWithJson(Panel panel, PanelData panelData)
+        private void SendPanelDataWithJson(Panel panel, PanelData panelData, string actionToInvoke)
         {
             if (panelData.ChildrenEntities != null)
             {
-                WebRequests.SendAction(panelData.ServiceToInvokeOnTap, panelData.ChildrenEntities.Select(x => x.EntityId));
+                WebRequests.SendAction(actionToInvoke, panelData.ChildrenEntities.Select(x => x.EntityId));
 
                 // Toggle the state of the root and children entities
-                panelData.Entity.State = panelData.Entity.GetToggledState();
+                //panelData.Entity.State = panelData.Entity.GetToggledState();
+                panelData.Entity.State = "updating...";
                 panelData.Entity.LastUpdated = DateTime.Now;
 
                 foreach (Entity child in panelData.ChildrenEntities)
                 {
-                    child.State = child.GetToggledState();
+                    child.State = "updating..."; // child.GetToggledState();
                     child.LastUpdated = DateTime.Now;
                 }
 
@@ -465,9 +492,9 @@ namespace HashBoard
             }
             else
             {
-                WebRequests.SendAction(panelData.Entity.EntityId, panelData.ServiceToInvokeOnTap);
+                WebRequests.SendAction(panelData.Entity.EntityId, actionToInvoke);
 
-                panelData.Entity.State = panelData.Entity.GetToggledState();
+                panelData.Entity.State = "updating..."; ///panelData.Entity.GetToggledState();
                 panelData.Entity.LastUpdated = DateTime.Now;
 
                 UpdateChildPanelIfneeded(panel, new List<Entity>() { panelData.Entity });
@@ -505,7 +532,7 @@ namespace HashBoard
                 // and ensure group entities may update if needed as well.
                 IEnumerable<Entity> entities = await WebRequests.GetData<IEnumerable<Entity>>($"api/states");
 
-                await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                 {
                     lock (this.Content)
                     {
@@ -526,35 +553,23 @@ namespace HashBoard
         /// <returns></returns>
         private async Task LoadFrame()
         {
-            ScrollViewer scrollViewer;
+            ScrollViewer scrollViewer = this.FindName("MainScrollView") as ScrollViewer;
+            StackPanel stackPanel = null;
 
             if (!string.IsNullOrEmpty(SettingsControl.HomeAssistantHostname))
             {
                 Task<List<Entity>> task = WebRequests.GetData<List<Entity>>("api/states");
 
-                if (this.Content != null)
-                {
-                    this.Content = null;
-                }
-
-
-                scrollViewer = CreateViews(await task);
+                stackPanel = CreateViews(await task);
             }
             else
             {
-                scrollViewer = CreateViews(new List<Entity>());
+                stackPanel = CreateViews(new List<Entity>());
             }
 
-            if (null != this.Content)
+            lock (this.Content)
             {
-                lock (this.Content)
-                {
-                    this.Content = scrollViewer;
-                }
-            }
-            else
-            {
-                this.Content = scrollViewer;
+                scrollViewer.Content = stackPanel;
             }
         }
 
@@ -656,53 +671,94 @@ namespace HashBoard
         /// Create a Panel for the purpose of loading a Settings UI selection popup screen.
         /// </summary>
         /// <returns></returns>
-        private WrapPanel CreateSettingsPanel()
+        private Entity CreateCustomStaticPanel(string panelName, string panelPicture)
         {
-            // Create a Settings panel as well
-            Entity settingsEntity = new Entity()
+            // Create the custom panel
+            return new Entity()
             {
-                EntityId = $"{SettingsMenuPanelName}.{SettingsMenuPanelName}",
+                EntityId = $"{panelName}.{panelName}",
                 LastChanged = DateTime.Now,
                 LastUpdated = DateTime.Now,
                 State = "on",
                 Attributes = new Dictionary<string, dynamic>() {
                     { "friendly_name", string.Empty },
-                    { "local_assets_picture", "panel-settings.png" }
+                    { "local_assets_picture", panelPicture }
             } };
+        }
 
-            // Create a custom Settings group view
-            Entity settingsView = new Entity()
+        /// <summary>
+        /// Creates a custom panel.
+        /// </summary>
+        /// <param name="childrenEntities"></param>
+        /// <returns></returns>
+        private WrapPanel CreateCustomGroupPanel(IEnumerable<Entity> childrenEntities)
+        { 
+            // Create the custom group to hold the panel
+            Entity view = new Entity()
             {
-                EntityId = $"group.{SettingsMenuPanelName}",
+                EntityId = $"group.{CustomgroupPanelName}",
                 LastChanged = DateTime.Now,
                 LastUpdated = DateTime.Now,
                 State = "off",
                 Attributes = new Dictionary<string, dynamic>() {
-                    { "friendly_name", "Settings" },
-                    { "entity_id", new List<string>() { settingsEntity.EntityId }  },
+                    { "friendly_name", CustomgroupPanelName },
+                    //{ "entity_id", "[" + string.Join(", ", childrenEntities.Select(x => "\"" + x.EntityId + "\"")) + "]"},
+                    { "entity_id", childrenEntities.Select(x => x.EntityId).ToList() },
                     { "order", 999 },
                     { "view", true },
             } };
 
-            return CreateEntitiesInView(settingsView, new List<Entity>() { settingsEntity });
+            return CreateEntitiesInView(view, childrenEntities);
         }
+
 
         /// <summary>
         /// Create the main hub view.
         /// </summary>
         /// <param name="allEntities"></param>
         /// <returns></returns>
-        private ScrollViewer CreateViews(IEnumerable<Entity> allEntities)
+        //private Grid CreateViews(IEnumerable<Entity> allEntities)
+        //{
+        //    //ImageBrush imageBrush = Imaging.LoadImageBrush("background-blue.jpg");
+        //    //ImageBrush imageBrush = Imaging.LoadImageBrush("background-red.jpg");
+
+        //    ScrollViewer scrollViewer = new ScrollViewer();
+        //    scrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+        //    scrollViewer.Background = imageBrush;
+
+        //    StackPanel stackPanel = new StackPanel();
+        //    stackPanel.Orientation = Orientation.Vertical;
+        //    stackPanel.HorizontalAlignment = HorizontalAlignment.Center;
+
+        //    // Get all home assistant "group" entities which have the "view=true" attribute set in customizations.yaml
+        //    IEnumerable<Entity> entityHeaders = allEntities.Where(group => group.Attributes.ContainsKey("view"));
+
+        //    // Add all single and group entities which are tied to each view
+        //    foreach (Entity entityHeader in entityHeaders)
+        //    {
+        //        stackPanel.Children.Add(CreateEntitiesInView(entityHeader, allEntities));
+        //    }
+
+        //    // Add a Settings panel
+        //    Entity settingsEntity = CreateCustomStaticPanel(SettingsControlPanelName, "panel-settings.png");
+        //    Entity themeEntity = CreateCustomStaticPanel(ThemeControlMenuPanelName, "panel-paintbrush.png");
+        //    WrapPanel customWrapPanel = CreateCustomGroupPanel(new List<Entity>() { settingsEntity, themeEntity });
+
+        //    stackPanel.Children.Add(customWrapPanel);
+
+        //    scrollViewer.Content = stackPanel;
+
+        //    return scrollViewer;
+        //}
+        private StackPanel CreateViews(IEnumerable<Entity> allEntities)
         {
-            ImageBrush imageBrush = Imaging.LoadImageBrush("background-blue.jpg");
-
-            ScrollViewer scrollViewer = new ScrollViewer();
-            scrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-            scrollViewer.Background = imageBrush;
-
             StackPanel stackPanel = new StackPanel();
             stackPanel.Orientation = Orientation.Vertical;
             stackPanel.HorizontalAlignment = HorizontalAlignment.Center;
+
+            //ImageBrush imageBrush = Imaging.LoadImageBrush("background-blue.jpg");
+            //stackPanel.Background = imageBrush;
+            //stackPanel.Opacity = 0.5;
 
             // Get all home assistant "group" entities which have the "view=true" attribute set in customizations.yaml
             IEnumerable<Entity> entityHeaders = allEntities.Where(group => group.Attributes.ContainsKey("view"));
@@ -714,12 +770,13 @@ namespace HashBoard
             }
 
             // Add a Settings panel
-            stackPanel.Children.Add(CreateSettingsPanel());
+            Entity settingsEntity = CreateCustomStaticPanel(SettingsControlPanelName, "panel-settings.png");
+            Entity themeEntity = CreateCustomStaticPanel(ThemeControlMenuPanelName, "panel-paintbrush.png");
+            WrapPanel customWrapPanel = CreateCustomGroupPanel(new List<Entity>() { settingsEntity, themeEntity });
 
-
-            scrollViewer.Content = stackPanel;
-
-            return scrollViewer;
+            stackPanel.Children.Add(customWrapPanel);
+                        
+            return stackPanel;
         }
 
         /// <summary>
@@ -771,10 +828,6 @@ namespace HashBoard
                 }
             }
 
-            //Newtonsoft.Json.Linq.JArray entityIds = entityHeader.Attributes["entity_id"];
-
-            //PanelBuilderBase customEntity = CustomEntities.FirstOrDefault(x => entityIds.Any(y => y.ToString().StartsWith(x.EntityIdStartsWith)));
-
             return wrapPanel;
         }
 
@@ -786,8 +839,6 @@ namespace HashBoard
             }
 
             Newtonsoft.Json.Linq.JArray childrenEntityIds = entity.Attributes["entity_id"];
-            //Newtonsoft.Json.Linq.JArray entityIds = entity.Attributes["entity_id"];
-            //var entityIds = entity.Attributes["entity_id"];
             
             PanelBuilderBase customEntity = CustomEntities.FirstOrDefault(x => childrenEntityIds.Any(y => y.ToString().StartsWith(x.EntityIdStartsWith)));
 
@@ -807,15 +858,5 @@ namespace HashBoard
 
             return customEntity.CreatePanel(entity);
         }
-
-
-        //private void MainPage_Tapped(object sender, PointerRoutedEventArgs e)
-        //{
-        //    if (contentDialog != null)
-        //    {
-        //        contentDialog.Hide();
-        //        cancellationTokenSourceContentDialog.Cancel();
-        //    }
-        //}
     }
 }

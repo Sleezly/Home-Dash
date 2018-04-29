@@ -19,11 +19,11 @@ namespace HashBoard
         /// </summary>
         public App()
         {
-#if DEBUG
-            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.Auto;
-#else
+//#if DEBUG
+//            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.Auto;
+//#else
             ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
-#endif
+//#endif
 
             this.InitializeComponent();
             this.Suspending += OnSuspending;

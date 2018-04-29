@@ -11,13 +11,13 @@ namespace HashBoard
 
         public Entity Entity { get; set; } 
 
-        public string ServiceToInvokeOnTap { get; set; }
+        public string ActionToInvokeOnTap { get; set; }
+
+        public string ActionToInvokeOnHold { get; set; }
 
         public IEnumerable<Entity> ChildrenEntities { get; set; }
 
         public DateTime LastDashboardtaUpdate { get; set; }
-
-        public string PopupUserControl { get; set; }
 
         public static PanelData GetPanelData(object obj) { return (PanelData)((FrameworkElement)obj).Tag; }
     }

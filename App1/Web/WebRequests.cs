@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -80,6 +81,8 @@ namespace HashBoard
             Task.Factory.StartNew(async () =>
             { 
                 Uri uri = new Uri($"http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
+
+                Debug.WriteLine($"{nameof(SendData)} Uri:{uri} Json:{data}");
 
                 HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(uri);
 

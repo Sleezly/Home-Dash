@@ -95,25 +95,29 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\Settings.Control.xaml.cs">
-      <DependentUpon>Settings.Control.xaml</DependentUpon>
+    <Compile Include="Controls\ClimateControl.xaml.cs">
+      <DependentUpon>ClimateControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\ThemeControl.xaml.cs">
+      <DependentUpon>ThemeControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\SettingsControl.xaml.cs">
+      <DependentUpon>SettingsControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\LightControl.xaml.cs">
       <DependentUpon>LightControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\UserControlHandlercs.cs" />
     <Compile Include="Controls\MediaControl.xaml.cs">
       <DependentUpon>MediaControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Extensions\EntityExtensions.cs" />
-    <Compile Include="MqttSubscriber.cs" />
+    <Compile Include="Mqtt\MqttSubscriber.cs" />
     <Compile Include="Panel Builders\DateTimePanelBuilder.cs" />
     <Compile Include="Panel Builders\MediaPlayerPanelBuilder.cs" />
     <Compile Include="Panel Builders\StatePanelBuilder.cs" />
     <Compile Include="Panel Builders\NameOnlyPanelBuilder.cs" />
     <Compile Include="Panel Builders\GenericPanelBuilder.cs" />
-    <Compile Include="PanelData.cs" />
-    <Compile Include="Settings.cs" />
+    <Compile Include="Panel Builders\PanelData.cs" />
     <Compile Include="Utilities\ColorConverter.cs" />
     <Compile Include="Panel Builders\LightPanelBuilder.cs" />
     <Compile Include="Panel Builders\DarkSkyPanelBuilder.cs" />
@@ -135,13 +139,18 @@
     <None Include="App1_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets\arrow-down.png" />
+    <Content Include="Assets\arrow-up.png" />
     <Content Include="Assets\background-blue.jpg" />
+    <Content Include="Assets\background-red.png" />
+    <Content Include="Assets\climate-leaf.png" />
     <Content Include="Assets\media-play.png" />
     <Content Include="Assets\media-shuffle.png" />
     <Content Include="Assets\media-skip-next.png" />
     <Content Include="Assets\media-skip-previous.png" />
     <Content Include="Assets\media-stop.png" />
     <Content Include="Assets\media-pause.png" />
+    <Content Include="Assets\panel-paintbrush.png" />
     <Content Include="Assets\power.png" />
     <Content Include="Assets\panel-settings.png" />
     <Content Include="Assets\volume-high.png" />
@@ -174,7 +183,15 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Page Include="Controls\Settings.Control.xaml">
+    <Page Include="Controls\ClimateControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\ThemeControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\SettingsControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

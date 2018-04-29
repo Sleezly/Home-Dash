@@ -22,7 +22,7 @@ namespace HashBoard
             return image;
         }
 
-        public static ImageBrush LoadImageBrush(string asset)
+        public static ImageBrush LoadAppXImageBrush(string asset)
         {
             const string UriAssetFormat = "ms-appx:///assets/";
 
@@ -48,6 +48,20 @@ namespace HashBoard
             return imageBrush;
         }
 
+
+        public static ImageBrush LoadAppDataImageBrush(string asset)
+        {
+            const string UriAssetFormat = "ms-appdata:///local/";
+
+            Uri imageUri = new Uri($"{UriAssetFormat}{asset}");
+
+            BitmapImage bitmapImage = new BitmapImage(imageUri);
+
+            ImageBrush imageBrush = new ImageBrush();
+            imageBrush.ImageSource = bitmapImage;
+
+            return imageBrush;
+        }
 
         public static ImageSource LoadImageSource(string asset)
         {

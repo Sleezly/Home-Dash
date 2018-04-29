@@ -1,13 +1,7 @@
 ﻿using HashBoard;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Timers;
-using Windows.System.Threading;
 using Windows.UI;
-using Windows.UI.Core;
 using Windows.UI.Input;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -26,6 +20,8 @@ namespace Hashboard
         public MediaControl(Entity entity)
         {
             this.InitializeComponent();
+
+            this.RequestedTheme = ThemeControl.GetApplicationTheme();
 
             PanelEntity = entity;
 
@@ -92,18 +88,16 @@ namespace Hashboard
             if (PanelEntity.Attributes.ContainsKey("media_title"))
             {
                 textTrackText.Text = PanelEntity.Attributes["media_title"];
-
-                // This text element is also set by the 'media_track' attribute so no need for an else{} block.
+            }
+            else
+            {
+                textTrackText.Text = string.Empty;
             }
 
             // Bose has "media_track" and "media_title" but we just want the track name so do this after "media_title"
             if (PanelEntity.Attributes.ContainsKey("media_track"))
             {
                 textTrackText.Text = PanelEntity.Attributes["media_track"];
-            }
-            else
-            {
-                textTrackText.Text = string.Empty;
             }
 
             if (PanelEntity.Attributes.ContainsKey("entity_picture"))
@@ -142,8 +136,8 @@ namespace Hashboard
         private void BitmapIcon_Tapped(object sender, TappedRoutedEventArgs e)
         {
             BitmapIcon bitmapIcon = sender as BitmapIcon;
+            bitmapIcon.Foreground = this.Foreground;
 
-            bitmapIcon.Foreground = new SolidColorBrush(Colors.White);
             switch (bitmapIcon.Tag.ToString())
             {
                 case "volume_down":
@@ -154,20 +148,6 @@ namespace Hashboard
                     ChangeScrobblerVolume(ScrobblerVolume.Up);
                     break;
 
-                //case "media_pause":
-                //    WebRequests.SendAction(PanelEntity.EntityId, bitmapIcon.Tag.ToString());
-
-                //    bitmapIcon.UriSource = new Uri($"ms-appx:///Assets/media-play.png");
-                //    bitmapIcon.Tag = "media_play";
-                //    break;
-
-                //case "media_play":
-                //    WebRequests.SendAction(PanelEntity.EntityId, bitmapIcon.Tag.ToString());
-
-                //    bitmapIcon.UriSource = new Uri($"ms-appx:///Assets/media-pause.png");
-                //    bitmapIcon.Tag = "media_pause";
-                //    break;
-
                 default:
                     WebRequests.SendAction(PanelEntity.EntityId, bitmapIcon.Tag.ToString());
                     break;
@@ -177,13 +157,13 @@ namespace Hashboard
         private void ButtonPrevious_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
             BitmapIcon bitmapIcon = sender as BitmapIcon;
-            bitmapIcon.Foreground = new SolidColorBrush(Colors.DarkGray);
+            bitmapIcon.Foreground = new SolidColorBrush(Colors.Gray);
         }
 
         private void ButtonPrevious_PointerExited(object sender, PointerRoutedEventArgs e)
         {
             BitmapIcon bitmapIcon = sender as BitmapIcon;
-            bitmapIcon.Foreground = new SolidColorBrush(Colors.White);
+            bitmapIcon.Foreground = this.Foreground;
         }
 
         private void Grid_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -202,8 +182,6 @@ namespace Hashboard
         private void Grid_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
             SetScobblerPercentage(sender, e);
-
-            //GetLatestEntityStateWithDelay(TimeSpan.FromSeconds(3));
         }
 
         private void SetScobblerPercentage(object sender, PointerRoutedEventArgs e)

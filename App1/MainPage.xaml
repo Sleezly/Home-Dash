@@ -5,6 +5,37 @@
     xmlns:local="using:HashBoard"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    RequestedTheme="Default">
 
+    <!--<Page.Resources>
+        <Storyboard x:Key="GradientAnimation" RepeatBehavior="Forever" SpeedRatio="0.2">
+            <ColorAnimationUsingKeyFrames
+                Storyboard.TargetName="MainScrollView"
+                Storyboard.TargetProperty="(UIElement.Background).(LinearGradientBrush.GradientStops)[0].(GradientStop.Color)"
+                EnableDependentAnimation="True">
+                <LinearColorKeyFrame KeyTime="0:0:0" Value="LightBlue"/>
+                <LinearColorKeyFrame KeyTime="0:0:1" Value="Navy"/>
+                <LinearColorKeyFrame KeyTime="0:0:2" Value="LightBlue"/>
+            </ColorAnimationUsingKeyFrames>
+            <ColorAnimationUsingKeyFrames
+                Storyboard.TargetName="MainScrollView"
+                Storyboard.TargetProperty="(UIElement.Background).(LinearGradientBrush.GradientStops)[1].(GradientStop.Color)"
+                EnableDependentAnimation="True"
+                BeginTime="0:0:0.1">
+                <LinearColorKeyFrame KeyTime="0:0:0" Value="LightBlue"/>
+                <LinearColorKeyFrame KeyTime="0:0:1" Value="Navy"/>
+                <LinearColorKeyFrame KeyTime="0:0:2" Value="LightBlue"/>
+            </ColorAnimationUsingKeyFrames>
+        </Storyboard>
+    </Page.Resources>-->
+
+    <ScrollViewer x:Name="MainScrollView">
+        <ScrollViewer.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1" ColorInterpolationMode="SRgbLinearInterpolation">
+                <GradientStop Offset="0" Color="SlateBlue"/>
+                <GradientStop Offset="1" Color="DarkSlateBlue"/>
+            </LinearGradientBrush>
+        </ScrollViewer.Background>
+    </ScrollViewer>
 </Page>

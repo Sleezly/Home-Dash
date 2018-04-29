@@ -26,7 +26,7 @@ namespace HashBoard
 
             if (entity.Attributes.ContainsKey("local_assets_picture"))
             {
-                grid.Background = Imaging.LoadImageBrush(entity.Attributes["local_assets_picture"]);
+                grid.Background = Imaging.LoadAppXImageBrush(entity.Attributes["local_assets_picture"]);
             }
 
             grid.Children.Add(textBlock);

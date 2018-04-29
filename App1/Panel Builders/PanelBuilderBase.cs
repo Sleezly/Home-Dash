@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Hashboard;
+using System;
 using System.Collections.Generic;
 using Windows.UI;
 using Windows.UI.Xaml;
@@ -23,7 +24,7 @@ namespace HashBoard
 
         protected SolidColorBrush NoninteractiveBrush = new SolidColorBrush(Color.FromArgb(CellOpacity, Colors.Black.R, Colors.Black.G, Colors.Black.B));
 
-        protected SolidColorBrush InteractiveBrush = new SolidColorBrush(Color.FromArgb(CellOpacity, Colors.RoyalBlue.R, Colors.RoyalBlue.G, Colors.RoyalBlue.B));
+        //protected SolidColorBrush InteractiveBrush = new SolidColorBrush(Color.FromArgb(CellOpacity, Colors.RoyalBlue.R, Colors.RoyalBlue.G, Colors.RoyalBlue.B));
 
         protected SolidColorBrush FontColorBrush = new SolidColorBrush(Colors.White);
 
@@ -39,7 +40,7 @@ namespace HashBoard
 
         public string TapEventAction { get; set; } = null;
 
-        public string EntityPopupControl { get; set; } = null;
+        public string HoldEventAction { get; set; } = null;
 
         public TappedEventHandler TapEventHandler { private get; set; } = null;
 
@@ -99,7 +100,7 @@ namespace HashBoard
                 }
                 else
                 {
-                    panel.Background = InteractiveBrush;
+                    panel.Background = ThemeControl.AccentColorBrush;
                 }
             }
 
@@ -108,8 +109,8 @@ namespace HashBoard
                 BackgroundBrush = panel.Background,
                 Entity = entity,
                 ChildrenEntities = childrenEntities,
-                ServiceToInvokeOnTap = TapEventAction,
-                PopupUserControl = EntityPopupControl,
+                ActionToInvokeOnTap = TapEventAction,
+                ActionToInvokeOnHold = HoldEventAction,
                 LastDashboardtaUpdate = DateTime.Now,
             };
         }
