@@ -20,12 +20,12 @@
                 </Ellipse.Fill>
             </Ellipse>
             <StackPanel VerticalAlignment="Center">
-                <BitmapIcon x:Name="ArrowUp" Width="64" UriSource="ms-appx:///Assets/arrow-up.png" Foreground="Black" Tapped="BitmapIcon_Tapped" PointerPressed="BitmapIcon_PointerPressed" PointerReleased="BitmapIcon_PointerReleased" PointerMoved="BitmapIcon_PointerReleased"/>
-                <TextBlock x:Name="CurrentTemperature" HorizontalAlignment="Center" Text="72" Foreground="Black" FontWeight="Bold" FontSize="48" />
-                <BitmapIcon x:Name="ArrowDown" Width="64" UriSource="ms-appx:///Assets/arrow-down.png" Foreground="Black" Tapped="BitmapIcon_Tapped" PointerPressed="BitmapIcon_PointerPressed" PointerReleased="BitmapIcon_PointerReleased" PointerMoved="BitmapIcon_PointerReleased"/>
+                <BitmapIcon x:Name="ArrowUp" Width="64" UriSource="ms-appx:///Assets/arrow-up.png" Foreground="LightYellow" Tapped="BitmapIcon_Tapped" PointerPressed="BitmapIcon_PointerPressed" PointerReleased="BitmapIcon_PointerReleased" PointerMoved="BitmapIcon_PointerReleased"/>
+                <TextBlock x:Name="TargetTemperature" HorizontalAlignment="Center" Text="72" Foreground="LightYellow" FontWeight="Bold" FontSize="48" />
+                <BitmapIcon x:Name="ArrowDown" Width="64" UriSource="ms-appx:///Assets/arrow-down.png" Foreground="LightYellow" Tapped="BitmapIcon_Tapped" PointerPressed="BitmapIcon_PointerPressed" PointerReleased="BitmapIcon_PointerReleased" PointerMoved="BitmapIcon_PointerReleased"/>
             </StackPanel>
         </Grid>
-        <TextBlock x:Name="TargetTemperature" HorizontalAlignment="Center" Text="Target: 69" Foreground="gray" FontSize="24" Padding="6" />
+        <TextBlock x:Name="CurrentTemperature" HorizontalAlignment="Center" Text="Actual Temperature: 69" Foreground="Gray" FontSize="24" Padding="6" />
         <Grid Padding="6">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" Text="Operation" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" FontSize="18" />
             <ComboBox x:Name="ComboOperation" HorizontalAlignment="Right" VerticalAlignment="Center" Width="160" SelectionChanged="ComboOperation_SelectionChanged" />

@@ -169,11 +169,12 @@ namespace HashBoard
                     EntityIdStartsWith = "sensor.forecast_",
                     Size = EntitySize.Condensed },
 
-                new GenericPanelBuilder() {
+                new ClimatePanelBuilder() {
                     EntityIdStartsWith = "climate.",
+                    FontSize = 32,
                     //HoldEventAction = nameof(ClimateControl),
                     TapEventAction = nameof(ClimateControl),
-                    ValueTextFromAttributeOverride = "current_temperature",
+                    //ValueTextFromAttributeOverride = "current_temperature",
                     TapEventHandler = PanelElement_Tapped,
                     //HoldEventHandler = PanelElement_Holding,
                     PressedEventHandler = PanelElement_PointerPressed,
@@ -394,7 +395,7 @@ namespace HashBoard
             }
             else
             {
-                Debug.WriteLine($"{nameof(StartMqttSubscriber)} successfully subscribed to MQTT brodker '{SettingsControl.MqttBrokerHostname}.");
+                Debug.WriteLine($"{nameof(StartMqttSubscriber)} successfully subscribed to MQTT brodker '{SettingsControl.MqttBrokerHostname}'.");
             }
         }
 
@@ -540,10 +541,10 @@ namespace HashBoard
                     }
                 });
             }
-            else
-            {
-                Debug.WriteLine($"{nameof(OnEntityUpdated)} - Updated too recently, ignoring update for: {entityId}.");
-            }
+            //else
+            //{
+            //    Debug.WriteLine($"{nameof(OnEntityUpdated)} - Updated too recently, ignoring update for: {entityId}.");
+            //}
         }
 
         /// <summary>
@@ -651,8 +652,12 @@ namespace HashBoard
                     // Replace the old panel with the new panel
                     Panel parentPanel = (Panel)VisualTreeHelper.GetParent(element);
                     int indexOfElement = parentPanel.Children.IndexOf(element);
-                    parentPanel.Children.RemoveAt(indexOfElement);
-                    parentPanel.Children.Insert(indexOfElement, panel);
+                    //parentPanel.Children.RemoveAt(indexOfElement);
+                    //parentPanel.Children.Insert(indexOfElement, panel);
+
+                    parentPanel.Children[indexOfElement] = panel;
+
+                    //Debug.WriteLine($"Replaced Panel: {entity.EntityId}.");
                 }
             }
             else
@@ -711,45 +716,6 @@ namespace HashBoard
             return CreateEntitiesInView(view, childrenEntities);
         }
 
-
-        /// <summary>
-        /// Create the main hub view.
-        /// </summary>
-        /// <param name="allEntities"></param>
-        /// <returns></returns>
-        //private Grid CreateViews(IEnumerable<Entity> allEntities)
-        //{
-        //    //ImageBrush imageBrush = Imaging.LoadImageBrush("background-blue.jpg");
-        //    //ImageBrush imageBrush = Imaging.LoadImageBrush("background-red.jpg");
-
-        //    ScrollViewer scrollViewer = new ScrollViewer();
-        //    scrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-        //    scrollViewer.Background = imageBrush;
-
-        //    StackPanel stackPanel = new StackPanel();
-        //    stackPanel.Orientation = Orientation.Vertical;
-        //    stackPanel.HorizontalAlignment = HorizontalAlignment.Center;
-
-        //    // Get all home assistant "group" entities which have the "view=true" attribute set in customizations.yaml
-        //    IEnumerable<Entity> entityHeaders = allEntities.Where(group => group.Attributes.ContainsKey("view"));
-
-        //    // Add all single and group entities which are tied to each view
-        //    foreach (Entity entityHeader in entityHeaders)
-        //    {
-        //        stackPanel.Children.Add(CreateEntitiesInView(entityHeader, allEntities));
-        //    }
-
-        //    // Add a Settings panel
-        //    Entity settingsEntity = CreateCustomStaticPanel(SettingsControlPanelName, "panel-settings.png");
-        //    Entity themeEntity = CreateCustomStaticPanel(ThemeControlMenuPanelName, "panel-paintbrush.png");
-        //    WrapPanel customWrapPanel = CreateCustomGroupPanel(new List<Entity>() { settingsEntity, themeEntity });
-
-        //    stackPanel.Children.Add(customWrapPanel);
-
-        //    scrollViewer.Content = stackPanel;
-
-        //    return scrollViewer;
-        //}
         private StackPanel CreateViews(IEnumerable<Entity> allEntities)
         {
             StackPanel stackPanel = new StackPanel();

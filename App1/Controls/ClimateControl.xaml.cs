@@ -1,11 +1,7 @@
 ﻿using HashBoard;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using Windows.Foundation;
 using Windows.UI;
-using Windows.UI.Input;
-using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
@@ -30,6 +26,39 @@ namespace Hashboard
             SetEllipse();
         }
 
+        public static LinearGradientBrush CreateLinearGradientBrush(Entity entity)
+        {
+            LinearGradientBrush lgb = new LinearGradientBrush();
+
+            switch (entity.Attributes["operation_mode"] as string)
+            {
+                case "off":
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGray, Offset = 0 });
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.Gray, Offset = 1 });
+                    break;
+
+                case "eco":
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGreen, Offset = 0 });
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.Green, Offset = 1 });
+                    break;
+
+                case "heat":
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.Orange, Offset = 0 });
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.OrangeRed, Offset = 1 });
+                    break;
+
+                case "cool":
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightSkyBlue, Offset = 0 });
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightCyan, Offset = 1 });
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException($"Unhandled climate operation mode '{entity.Attributes["operation_mode"]}'.");
+            }
+
+            return lgb;
+        }
+
         private void InitializeUI()
         {
             TextBlock deviceName = this.FindName("DeviceText") as TextBlock;
@@ -37,8 +66,8 @@ namespace Hashboard
             TextBlock targetTemperature = this.FindName("TargetTemperature") as TextBlock;
 
             deviceName.Text = ClimateEntity.Attributes["friendly_name"];
-            currentTemperature.Text = ClimateEntity.Attributes["current_temperature"] + ClimateEntity.Attributes["unit_of_measurement"];
-            targetTemperature.Text = $"Target: {ClimateEntity.Attributes["temperature"]}{ClimateEntity.Attributes["unit_of_measurement"]}";
+            currentTemperature.Text = $"Actual: {ClimateEntity.Attributes["current_temperature"]}{ClimateEntity.Attributes["unit_of_measurement"]}";
+            targetTemperature.Text = $"{ClimateEntity.Attributes["temperature"]}{ClimateEntity.Attributes["unit_of_measurement"]}";
 
             ComboBox comboOperation = this.FindName("ComboOperation") as ComboBox;
             ComboBox comboFanMode = this.FindName("ComboFanMode") as ComboBox;
@@ -65,41 +94,13 @@ namespace Hashboard
         private void SetEllipse()
         {
             Ellipse ellipse = this.FindName("Ellipse") as Ellipse;
-            LinearGradientBrush lgb = new LinearGradientBrush();
-
-            switch (ClimateEntity.Attributes["operation_mode"] as string)
-            {
-                case "off":
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.Gray });
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGray });
-                    break;
-
-                case "eco":
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.Green });
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGreen });
-                    break;
-
-                case "heat":
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.Orange });
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.OrangeRed });
-                    break;
-
-                case "cool":
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightSkyBlue });
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightCyan });
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException($"Unhandled climate operation mode '{ClimateEntity.Attributes["operation_mode"]}'.");
-            }
-
-            ellipse.Fill = lgb;
+            ellipse.Fill = CreateLinearGradientBrush(ClimateEntity);
         }
 
         private void BitmapIcon_Tapped(object sender, TappedRoutedEventArgs e)
         {
             BitmapIcon bitmapIcon = sender as BitmapIcon;
-            bitmapIcon.Foreground = new SolidColorBrush(Colors.Black);
+            bitmapIcon.Foreground = new SolidColorBrush(Colors.LightYellow);
 
             int temperatureToSet = Convert.ToInt32(ClimateEntity.Attributes["temperature"]);
 
@@ -122,7 +123,7 @@ namespace Hashboard
 
             // Update the UI
             TextBlock targetTemperature = this.FindName("TargetTemperature") as TextBlock;
-            targetTemperature.Text = $"Target: {ClimateEntity.Attributes["temperature"]}{ClimateEntity.Attributes["unit_of_measurement"]}";
+            targetTemperature.Text = $"{ClimateEntity.Attributes["temperature"]}{ClimateEntity.Attributes["unit_of_measurement"]}";
         }
 
         private void BitmapIcon_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -136,7 +137,7 @@ namespace Hashboard
             if (e.Pointer.IsInContact)
             {
                 BitmapIcon bitmapIcon = sender as BitmapIcon;
-                bitmapIcon.Foreground = new SolidColorBrush(Colors.Black);
+                bitmapIcon.Foreground = new SolidColorBrush(Colors.LightYellow);
             }
         }
 

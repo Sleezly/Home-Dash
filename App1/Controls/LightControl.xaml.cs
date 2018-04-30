@@ -59,7 +59,7 @@ namespace Hashboard
                 if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == EntityExtensions.SupportedFeatures.Colors)
                 {
                     line.Tapped += ColorWheelLine_Tapped;
-                    line.PointerMoved += ColorWheelLine_PointerMoved;
+                    line.PointerReleased += ColorWheelLine_PointerReleased;
 
                     lgb.GradientStops.Add(new GradientStop() { Color = Colors.White });
                     lgb.GradientStops.Add(new GradientStop() { Color = ColorConverter.HSVtoRGB(i, 1, 1), Offset = 1 });
@@ -546,17 +546,15 @@ namespace Hashboard
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void ColorWheelLine_PointerMoved(object sender, PointerRoutedEventArgs e)
+        private void ColorWheelLine_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            if (e.Pointer.IsInContact)
-            {
-                Grid grid = this.FindName("ColorWheel") as Grid;
+            Grid grid = this.FindName("ColorWheel") as Grid;
 
-                PointerPoint pointerPointFromLine = e.GetCurrentPoint(sender as UIElement);
-                PointerPoint pointerPointFromParent = e.GetCurrentPoint(grid as UIElement);
-                
-                UpdateColorWheel(sender as Line, pointerPointFromLine.Position, pointerPointFromParent.Position, grid.Margin);
-            }
+            PointerPoint pointerPointFromLine = e.GetCurrentPoint(sender as UIElement);
+            PointerPoint pointerPointFromParent = e.GetCurrentPoint(grid as UIElement);
+
+            // Sending a color-change on drag overloads Home Assistant so disable this
+            UpdateColorWheel(sender as Line, pointerPointFromLine.Position, pointerPointFromParent.Position, grid.Margin);
         }
 
         /// <summary>

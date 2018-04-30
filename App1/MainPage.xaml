@@ -31,11 +31,11 @@
     </Page.Resources>-->
 
     <ScrollViewer x:Name="MainScrollView">
-        <ScrollViewer.Background>
+        <!--<ScrollViewer.Background>
             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1" ColorInterpolationMode="SRgbLinearInterpolation">
                 <GradientStop Offset="0" Color="SlateBlue"/>
                 <GradientStop Offset="1" Color="DarkSlateBlue"/>
             </LinearGradientBrush>
-        </ScrollViewer.Background>
+        </ScrollViewer.Background>-->
     </ScrollViewer>
 </Page>

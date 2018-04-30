@@ -100,7 +100,6 @@ namespace HashBoard
             Debug.WriteLine($"MQTT:  {entityId} - {message}");
 
             EntityUpdatedCallback(entityId);
-
         }
     }
 }

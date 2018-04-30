@@ -100,7 +100,13 @@ namespace HashBoard
                 }
                 else
                 {
-                    panel.Background = ThemeControl.AccentColorBrush;
+                    //panel.Background = ThemeControl.AccentColorBrush;
+
+                    panel.Background = new SolidColorBrush(Color.FromArgb(
+                        CellOpacity,
+                        ThemeControl.AccentColorBrush.Color.R,
+                        ThemeControl.AccentColorBrush.Color.G,
+                        ThemeControl.AccentColorBrush.Color.B));
                 }
             }
 

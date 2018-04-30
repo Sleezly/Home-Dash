@@ -23,6 +23,5 @@
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">Background Image:</TextBlock>
             <ComboBox x:Name="ComboBackgroundImage" HorizontalAlignment="Right" Width="160" ItemsSource="{Binding}"/>
         </Grid>
-        <Grid Padding="8"/>
     </StackPanel>
 </UserControl>

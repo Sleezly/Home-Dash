@@ -1,14 +1,15 @@
 ﻿using HashBoard;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
+using System.Collections.ObjectModel;
+//using System.Drawing;
+using System.Linq;
+using System.Reflection;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Media;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Hashboard
 {
@@ -59,7 +60,6 @@ namespace Hashboard
             SelectNewImageFileText,
             BackgroundWavesBlue,
             BackgroundWavesRed,
-            "White",
             "Black",
             "Gray",
             "SlateGray",
@@ -69,14 +69,12 @@ namespace Hashboard
         {
             switch (ApplicationTheme)
             {
-                case "Dark":
-                    return ElementTheme.Dark;
-
                 case "Light":
                     return ElementTheme.Light;
 
+                case "Dark":
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    return ElementTheme.Dark;
             }
         }
 
@@ -157,7 +155,7 @@ namespace Hashboard
             }
             else
             {
-                comboBackgroundImage.SelectedItem = AppXBackgroundImages[BackgroundWavesBlue];
+                comboBackgroundImage.SelectedItem = AppXBackgroundImages.FirstOrDefault(x => x.Value == AppXBackgroundImages[BackgroundWavesBlue].ToString()).Key;
             }
 
             comboBackgroundImage.SelectionChanged += Combo_SelectionChanged;
@@ -187,7 +185,7 @@ namespace Hashboard
             {
                 if (null != localSettings.Values["AccentColorBrush"])
                 {
-                    Color color = Color.FromName(localSettings.Values["AccentColorBrush"] as string);
+                    System.Drawing.Color color = System.Drawing.Color.FromName(localSettings.Values["AccentColorBrush"] as string);
                     return new SolidColorBrush(Windows.UI.Color.FromArgb(color.A, color.R, color.G, color.B));
                 }
                 else
@@ -214,7 +212,7 @@ namespace Hashboard
                 }
                 else if (null != localSettings.Values["SolidColorBackground"])
                 {
-                    Color color = Color.FromName(localSettings.Values["SolidColorBackground"] as string);
+                    System.Drawing.Color color = System.Drawing.Color.FromName(localSettings.Values["SolidColorBackground"] as string);
                     return new SolidColorBrush(Windows.UI.Color.FromArgb(color.A, color.R, color.G, color.B)); ;
                 }
                 else

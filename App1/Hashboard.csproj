@@ -113,6 +113,7 @@
     <Compile Include="Extensions\EntityExtensions.cs" />
     <Compile Include="Mqtt\MqttSubscriber.cs" />
     <Compile Include="Panel Builders\DateTimePanelBuilder.cs" />
+    <Compile Include="Panel Builders\ClimatePanelBuilder.cs" />
     <Compile Include="Panel Builders\MediaPlayerPanelBuilder.cs" />
     <Compile Include="Panel Builders\StatePanelBuilder.cs" />
     <Compile Include="Panel Builders\NameOnlyPanelBuilder.cs" />
