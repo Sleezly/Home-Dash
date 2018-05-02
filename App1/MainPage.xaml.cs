@@ -28,32 +28,48 @@ namespace HashBoard
     /// </summary>
     public sealed partial class MainPage : Page
     {
-        private const int LightSensorReadingRateInMs = 5000;
-
+        /// <summary>
+        /// Built in panels which are always shown
+        /// </summary>
         private const string CustomgroupPanelName = "customstaticgroup";
 
         private const string SettingsControlPanelName = "settingscontrol";
 
         private const string ThemeControlMenuPanelName = "themecontrol";
 
+        /// <summary>
+        /// Convert mouse press+hold in to a tap+hold event which happens natively on touch
+        /// screen devices only.
+        /// </summary>
         private DateTime MousePressStartTime;
 
-        private List<PanelBuilderBase> CustomEntities;
-
-        // Polling thread cancellation token
+        /// <summary>
+        /// Polling thread cancellation token
+        /// </summary>
         private CancellationTokenSource PollingThreadCancellationToken;
 
-        // MQTT response worker thread and wakeup cancellation tokens
+        /// <summary>
+        /// MQTT subscriber and worker cancellation tokens for event driven work requests
+        /// </summary>
         private CancellationTokenSource EntityUpdateRequestedQuitCancellationToken;
         private CancellationTokenSource EntityUpdateRequestedWakeupCancellationToken;
 
-        // Pxoximity sensors
+        private MqttSubscriber mqttSubscriber;
+
+        /// <summary>
+        /// Pxoximity sensors
+        /// </summary>
+        private readonly TimeSpan LightSensorReadingRateInMs = TimeSpan.FromSeconds(5);
+
         private DisplayRequest DisplayRequestSetting = new DisplayRequest();
         private BrightnessOverride BrightnessOverrideSetting;
         private LightSensor LightSensorSetting;
         private double PreviousDisplayBrightness;
 
-        MqttSubscriber mqttSubscriber;
+        /// <summary>
+        /// Rule list which instructs how to build each type of entity in to a panel.
+        /// </summary>
+        private List<PanelBuilderBase> CustomEntities;
 
         /// <summary>
         /// List of custom controls which can be opned as a Popup via Tap or Tap+Hold actions on a Panel.
@@ -67,19 +83,26 @@ namespace HashBoard
             nameof(ThemeControl),
         };
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
         public MainPage()
         {
             this.InitializeComponent();
 
             this.RequestedTheme = ThemeControl.GetApplicationTheme();
 
-            //ShowMainPageBackground();
+            // Set the theme
             ScrollViewer scrollViewer = this.FindName("MainScrollView") as ScrollViewer;
             scrollViewer.Background = ThemeControl.BackgroundBrush;
 
-            LoadEntityHandler();
+            LoadCustomEntityHandler();
         }
 
+        /// <summary>
+        /// OnNavitatedTo
+        /// </summary>
+        /// <param name="e"></param>
         protected async override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
@@ -98,7 +121,7 @@ namespace HashBoard
             LightSensorSetting = LightSensor.GetDefault();
             if (LightSensorSetting != null)
             {
-                LightSensorSetting.ReportInterval = LightSensorReadingRateInMs;
+                LightSensorSetting.ReportInterval = Convert.ToUInt32(LightSensorReadingRateInMs.TotalMilliseconds);
                 LightSensorSetting.ReadingChanged += LightSensor_ReadingChanged;
             }
 
@@ -158,7 +181,7 @@ namespace HashBoard
         //    base.OnNavigatingFrom(e);
         //}
 
-        private void LoadEntityHandler()
+        private void LoadCustomEntityHandler()
         {
             CustomEntities = new List<PanelBuilderBase>()
             {
@@ -185,11 +208,11 @@ namespace HashBoard
                 new ClimatePanelBuilder() {
                     EntityIdStartsWith = "climate.",
                     FontSize = 32,
-                    //HoldEventAction = nameof(ClimateControl),
+                    HoldEventAction = nameof(ClimateControl),
                     TapEventAction = nameof(ClimateControl),
                     //ValueTextFromAttributeOverride = "current_temperature",
                     TapEventHandler = PanelElement_Tapped,
-                    //HoldEventHandler = PanelElement_Holding,
+                    HoldEventHandler = PanelElement_Holding,
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
 
@@ -229,7 +252,7 @@ namespace HashBoard
 
                 new GenericPanelBuilder() {
                     EntityIdStartsWith = "automation.",
-                    TapEventAction = "activate",
+                    TapEventAction = "trigger",
                     HoldEventAction = "toggle",
                     TapEventHandler = PanelElement_Tapped,
                     HoldEventHandler = PanelElement_Holding,
@@ -280,7 +303,7 @@ namespace HashBoard
                     break;
 
                 case nameof(ThemeControl):
-                    popupContent = new ThemeControl(ShowMainPageBackground);
+                    popupContent = new ThemeControl(UpdateMainFrameWithNewTheme);
                     break;
 
                 default:
@@ -326,13 +349,15 @@ namespace HashBoard
         }
 
         /// <summary>
-        /// Updates the main background brush using theme resource.
+        /// Callback which signals a theme change has been requested
         /// </summary>
-        private async void ShowMainPageBackground()
+        private async void UpdateMainFrameWithNewTheme()
         {
+            // Set the theme (in case it changed)
             ScrollViewer scrollViewer = this.FindName("MainScrollView") as ScrollViewer;
             scrollViewer.Background = ThemeControl.BackgroundBrush;
 
+            // Completely reload the UI to bring in a new theme
             await LoadFrame();
         }
 
@@ -553,7 +578,8 @@ namespace HashBoard
         /// <param name="panel"></param>
         private void MarkPanelAsUpdateRequired(Panel panel)
         {
-            panel.Background = new SolidColorBrush(Color.FromArgb(60, Colors.Lime.R, Colors.Lime.G, Colors.Lime.B));
+            panel.Background = new SolidColorBrush(Colors.Lime);
+            panel.Background.Opacity = StateIsOffOpacity;
         }
 
         /// <summary>
@@ -571,7 +597,14 @@ namespace HashBoard
         /// <param name="panel"></param>
         private void MarkPanelAsDefaultState(Panel panel)
         {
-            panel.Background.Opacity = PanelBuilderBase.DefaultOpacity;
+            if (PanelData.GetPanelData(panel).Entity.IsInOffState())
+            {
+                panel.Background.Opacity = PanelBuilderBase.StateIsOffOpacity;
+            }
+            else
+            {
+                panel.Background.Opacity = PanelBuilderBase.DefaultOpacity;
+            }
         }
 
         /// <summary>
@@ -591,7 +624,7 @@ namespace HashBoard
         /// MQTT callback to signal an update is requested. Queue up an event to wake up te MQTT worker thread.
         /// </summary>
         /// <param name="entityId"></param>
-        private void OnEntityUpdated(string entityId)
+        private void OnEntityUpdated()
         {
             // Set the event token signal -- very important to avoid blocking this thread since this is doing work
             // on the MQTT subscriber thread and will block additional entity updates from being requested.
@@ -843,15 +876,16 @@ namespace HashBoard
             return CreateEntitiesInView(view, childrenEntities);
         }
 
+        /// <summary>
+        /// Creates the main default view.
+        /// </summary>
+        /// <param name="allEntities"></param>
+        /// <returns></returns>
         private StackPanel CreateViews(IEnumerable<Entity> allEntities)
         {
             StackPanel stackPanel = new StackPanel();
             stackPanel.Orientation = Orientation.Vertical;
             stackPanel.HorizontalAlignment = HorizontalAlignment.Center;
-
-            //ImageBrush imageBrush = Imaging.LoadImageBrush("background-blue.jpg");
-            //stackPanel.Background = imageBrush;
-            //stackPanel.Opacity = 0.5;
 
             // Get all home assistant "group" entities which have the "view=true" attribute set in customizations.yaml
             IEnumerable<Entity> entityHeaders = allEntities.Where(group => group.Attributes.ContainsKey("view"));

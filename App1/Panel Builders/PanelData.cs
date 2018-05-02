@@ -5,11 +5,11 @@ namespace HashBoard
 {
     public class PanelData
     {
-        public Entity Entity { get; set; } 
-
         public string ActionToInvokeOnTap { get; set; }
 
         public string ActionToInvokeOnHold { get; set; }
+
+        public Entity Entity { get; set; }
 
         public IEnumerable<Entity> ChildrenEntities { get; set; }
 

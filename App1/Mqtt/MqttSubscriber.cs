@@ -1,8 +1,6 @@
 ﻿using Hashboard;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
 using System.Threading.Tasks;
 using uPLibrary.Networking.M2Mqtt;
 using uPLibrary.Networking.M2Mqtt.Messages;
@@ -13,7 +11,7 @@ namespace HashBoard
     {
         private MqttClient client;
 
-        public delegate void OnEntityUpdated(string entityId);
+        public delegate void OnEntityUpdated();
         public delegate void OnConnectionResult(byte connectionResponse);
 
         private OnEntityUpdated EntityUpdatedCallback { get; set; }
@@ -97,7 +95,7 @@ namespace HashBoard
             //string message = Encoding.UTF8.GetString(e.Message);
             //string entityId = $"{e.Topic.Split('/')[1]}.{e.Topic.Split('/')[2]}";
 
-            EntityUpdatedCallback(string.Empty);
+            EntityUpdatedCallback();
         }
     }
 }

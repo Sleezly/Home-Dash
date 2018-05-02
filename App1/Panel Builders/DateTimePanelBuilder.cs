@@ -15,7 +15,7 @@ namespace HashBoard
             Grid grid = new Grid();
             grid.Width = width;
             grid.Height = height;
-            grid.Padding = new Thickness(Padding);
+            grid.Padding = new Thickness(PanelMargins);
 
             DateTime dateTime = Convert.ToDateTime(entity.State);
 

@@ -19,36 +19,26 @@ namespace HashBoard
             Grid panel = new Grid();
             panel.Width = width;
             panel.Height = height;
-            panel.Padding = new Thickness(Padding);
-            panel.Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
+            panel.Padding = new Thickness(PanelMargins);
+            panel.Background = new SolidColorBrush(Colors.Transparent);
+            panel.CacheMode = new BitmapCache();
 
             TextBlock textDate = new TextBlock();
             textDate.Text = entity.Attributes["friendly_name"];
             textDate.HorizontalAlignment = HorizontalAlignment.Center;
             textDate.VerticalAlignment = VerticalAlignment.Top;
-            //textDate.FontWeight = FontWeights.Bold;
             textDate.Foreground = FontColorBrush;
-            //textDate.FontSize = FontSize;
-
-            //Border border = new Border();
-            //border.BorderThickness = new Thickness(2);
-            //border.BorderBrush = new SolidColorBrush(Colors.Black);
 
             Image image = GetWeatherImage(entity.Attributes["icon"]);
-            image.Width = panel.Width - Padding * 2;
+            image.Width = panel.Width - PanelPadding * 2;
             image.VerticalAlignment = VerticalAlignment.Center;
             image.HorizontalAlignment = HorizontalAlignment.Center;
-            //BitmapCache mode??
-
-            //border.Child = image;
 
             TextBlock textTemperature = new TextBlock();
             textTemperature.Text = string.Join(" | ", entity.State.Split('/'));
             textTemperature.HorizontalAlignment = HorizontalAlignment.Center;
             textTemperature.VerticalAlignment = VerticalAlignment.Bottom;
-            //textTemperature.FontWeight = FontWeights.Bold;
             textTemperature.Foreground = FontColorBrush;
-            //textTemperature.FontSize = FontSize;
 
             panel.Children.Add(textDate);
             panel.Children.Add(image);

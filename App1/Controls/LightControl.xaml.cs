@@ -10,6 +10,7 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Shapes;
+using static HashBoard.Entity;
 
 namespace Hashboard
 {
@@ -56,7 +57,7 @@ namespace Hashboard
 
                 // Only allow interaction with the color wheel when color behavior is supported. To signify the color wheel
                 // is disabled, also add a gray-tone to the colors.
-                if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == EntityExtensions.SupportedFeatures.Colors)
+                if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == SupportedFeatures.Colors)
                 {
                     line.Tapped += ColorWheelLine_Tapped;
                     line.PointerReleased += ColorWheelLine_PointerReleased;
@@ -208,7 +209,7 @@ namespace Hashboard
             }
 
             // ColorTemperature should be a constant yellowish-hue line for brightness-only lights
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == EntityExtensions.SupportedFeatures.BrightnessOnly)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == SupportedFeatures.BrightnessOnly)
             {
                 Rectangle colorTemperature = this.FindName("ColorTemperature") as Rectangle;
                 colorTemperature.Fill = new SolidColorBrush(Colors.LightYellow);
@@ -579,7 +580,7 @@ namespace Hashboard
         /// <param name="e"></param>
         private void ColorWheelGrid_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == EntityExtensions.SupportedFeatures.Colors)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == SupportedFeatures.Colors)
             {
                 ShowColorWheelCircle(Visibility.Collapsed);
             }
@@ -592,7 +593,7 @@ namespace Hashboard
         /// <param name="e"></param>
         private void ColorWheelGrid_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == EntityExtensions.SupportedFeatures.Colors)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == SupportedFeatures.Colors)
             {
                 ShowColorWheelCircle(Visibility.Visible);
             }
@@ -605,7 +606,7 @@ namespace Hashboard
         /// <param name="e"></param>
         private void ColorWheelGrid_PointerExited(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == EntityExtensions.SupportedFeatures.Colors)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == SupportedFeatures.Colors)
             {
                 if (e.Pointer.IsInContact)
                 {
@@ -616,7 +617,7 @@ namespace Hashboard
 
         private void ColorTemperature_Tapped(object sender, TappedRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != SupportedFeatures.BrightnessOnly)
             {
                 ShowColorTemperatureCircle(Visibility.Visible);
 
@@ -629,7 +630,7 @@ namespace Hashboard
 
         private void ColorTemperature_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != SupportedFeatures.BrightnessOnly)
             {
                 ShowColorTemperatureCircle(Visibility.Collapsed);
             }
@@ -637,45 +638,15 @@ namespace Hashboard
 
         private void ColorTemperature_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != SupportedFeatures.BrightnessOnly)
             {
                 ShowColorTemperatureCircle(Visibility.Visible);
             }
         }
 
-        private void ColorTemperature_PointerMoved(object sender, PointerRoutedEventArgs e)
-        {
-            //if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
-            //{
-            //    if (e.Pointer.IsInContact)
-            //    {
-            //        Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
-            //        double percentage = 1.0 - e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
-
-            //        //SetColorTemperature(percentage);
-            //    }
-            //}
-        }
-
-        private void ColorTemperature_PointerExited(object sender, PointerRoutedEventArgs e)
-        {
-            //if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
-            //{
-            //    if (e.Pointer.IsInContact)
-            //    {
-            //        Rectangle rectangle = this.FindName("ColorTemperature") as Rectangle;
-            //        double percentage = 1.0 - e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
-
-            //        SetColorTemperature(percentage);
-
-            //        ShowColorTemperatureCircle(Visibility.Visible);
-            //    }
-            //}
-        }
-
         private void SetColorTemperature(double percentage)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != SupportedFeatures.BrightnessOnly)
             {
                 int temperature = Convert.ToInt32((MaximumColorTemperature - MinimumColorTemperature) * percentage + MinimumColorTemperature);
 
@@ -687,7 +658,7 @@ namespace Hashboard
 
         private void ColorTemperatureCircle_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != SupportedFeatures.BrightnessOnly)
             {
                 if (e.Pointer.IsInContact)
                 {
@@ -698,7 +669,7 @@ namespace Hashboard
 
         private void ColorTemperatureCircle_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != EntityExtensions.SupportedFeatures.BrightnessOnly)
+            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != SupportedFeatures.BrightnessOnly)
             {
                 if (e.Pointer.IsInContact)
                 {
@@ -734,39 +705,7 @@ namespace Hashboard
             Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
             ellipse.Visibility = Visibility.Visible;
         }
-
-        private void Brightness_PointerMoved(object sender, PointerRoutedEventArgs e)
-        {
-            //if (e.Pointer.IsInContact)
-            //{
-            //    Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
-            //    ellipse.Visibility = Visibility.Collapsed;
-
-            //    Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
-            //    double percentage = e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
-
-            //    UpdateBrightnessControl(255 * percentage);
-
-            //    //SendBrightnessUpdate(255 * percentage);
-            //}
-        }
-
-        private void Brightness_PointerExited(object sender, PointerRoutedEventArgs e)
-        {
-            //if (e.Pointer.IsInContact)
-            //{
-            //    Ellipse ellipse = this.FindName("BrightnessCircle") as Ellipse;
-            //    ellipse.Visibility = Visibility.Visible;
-
-            //    Rectangle rectangle = this.FindName("BrightnessRectangle") as Rectangle;
-            //    double percentage = e.GetCurrentPoint(rectangle).Position.X / rectangle.Width;
-
-            //    UpdateBrightnessControl(255 * percentage);
-
-            //    SendBrightnessUpdate(255 * percentage);
-            //}
-        }
-
+        
         private void BrightnessCircle_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
             if (e.Pointer.IsInContact)

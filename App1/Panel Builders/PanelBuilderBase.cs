@@ -1,5 +1,4 @@
 ﻿using Hashboard;
-using System;
 using System.Collections.Generic;
 using Windows.UI;
 using Windows.UI.Xaml;
@@ -11,27 +10,23 @@ namespace HashBoard
 {
     public abstract class PanelBuilderBase
     {
-        private const int CellSize = 170;
+        private const int PanelSize = 170;
 
-        protected const int Padding = 6;
+        protected const int PanelPadding = 5;
+
+        protected const int PanelMargins = 2;
 
         public const double DefaultOpacity = 0.8;
 
-        public const double PressedOpacity = 0.35;
+        public const double PressedOpacity = 0.4;
 
-        protected SolidColorBrush LightGrayBrushAlmostTransparent = new SolidColorBrush(Color.FromArgb(40, Colors.LightGray.R, Colors.LightGray.G, Colors.LightGray.B));
+        public const double StateIsOffOpacity = 0.3;
 
-        protected SolidColorBrush LightGrayBrush = new SolidColorBrush(Color.FromArgb(Convert.ToByte(255 * DefaultOpacity), Colors.LightGray.R, Colors.LightGray.G, Colors.LightGray.B));
-
-        protected SolidColorBrush NoninteractiveBrush = new SolidColorBrush(Color.FromArgb(Convert.ToByte(255 * DefaultOpacity), Colors.Black.R, Colors.Black.G, Colors.Black.B));
+        protected Color NoninteractiveBrushColor = Colors.Black;
 
         protected SolidColorBrush FontColorBrush = new SolidColorBrush(Colors.White);
 
         protected int FontSize = 18;
-
-        //public delegate bool CustomEntityRule(State entity);
-
-        //public CustomEntityRule Rule { get; set; }
 
         public enum EntitySize { Narrow, Condensed, Normal, Wide };
 
@@ -57,7 +52,7 @@ namespace HashBoard
 
         public Panel CreatePanel(Entity entity)
         {
-            Panel panel = CreateSinglePanel(entity, Width(CellSize), CellSize);
+            Panel panel = CreateSinglePanel(entity, Width(PanelSize), PanelSize);
 
             if (panel != null)
             {
@@ -69,7 +64,7 @@ namespace HashBoard
 
         public Panel CreateGroupPanel(Entity entity, IEnumerable<Entity> childrenEntities)
         {
-            Panel panel = CreateGroupPanel(entity, childrenEntities, Width(CellSize), CellSize);
+            Panel panel = CreateGroupPanel(entity, childrenEntities, Width(PanelSize), PanelSize);
 
             if (panel != null)
             {
@@ -81,7 +76,7 @@ namespace HashBoard
 
         private void SetPanelAttributes(Entity entity, Panel panel, IEnumerable<Entity> childrenEntities)
         {
-            panel.Margin = new Thickness(Padding);
+            panel.Margin = new Thickness(PanelPadding);
 
             panel.Tapped += this?.TapEventHandler;
             panel.PointerPressed += this?.PressedEventHandler;
@@ -95,13 +90,22 @@ namespace HashBoard
             {
                 if (TapEventHandler == null)
                 {
-                    panel.Background = NoninteractiveBrush;
+                    panel.Background = new SolidColorBrush(NoninteractiveBrushColor);
                 }
                 else
                 {
                     panel.Background = ThemeControl.AccentColorBrush;
-                    panel.Background.Opacity = DefaultOpacity;
+
+                    if (entity.IsInOffState())
+                    {
+                        panel.Background.Opacity = StateIsOffOpacity;
+                    }
                 }
+            }
+
+            if (panel.Background.Opacity == 1.0)
+            {
+                panel.Background.Opacity = DefaultOpacity;
             }
 
             panel.Tag = new PanelData()
@@ -118,13 +122,13 @@ namespace HashBoard
             switch (Size)
             { 
                 case EntitySize.Narrow:
-                    return size / 2 - Padding;
+                    return size / 2 - PanelPadding;
 
                 case EntitySize.Condensed:
-                    return size / 3 * 2 - Padding / 3 * 2;
+                    return size / 3 * 2 - PanelPadding / 3 * 2;
 
                 case EntitySize.Wide:
-                    return size * 2 + Padding * 2;
+                    return size * 2 + PanelPadding * 2;
                 
                 default:
                     return size;

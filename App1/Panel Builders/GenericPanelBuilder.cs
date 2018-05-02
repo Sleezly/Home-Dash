@@ -15,11 +15,13 @@ namespace HashBoard
             Grid grid = new Grid();
             grid.Width = width;
             grid.Height = height;
+            grid.Padding = new Thickness(PanelMargins);
 
             TextBlock textName = new TextBlock();
             textName.Text = entity.Attributes["friendly_name"];
             textName.FontSize = FontSize;
             textName.TextWrapping = TextWrapping.Wrap;
+            textName.TextAlignment = TextAlignment.Center;
             textName.HorizontalAlignment = HorizontalAlignment.Center;
             textName.VerticalAlignment = VerticalAlignment.Top;
             textName.Foreground = FontColorBrush;
@@ -31,6 +33,7 @@ namespace HashBoard
             textBlock.Text = string.IsNullOrEmpty(ValueTextFromAttributeOverride) ? entity.State :
                 Convert.ToString(entity.Attributes[ValueTextFromAttributeOverride]);
             textBlock.TextWrapping = TextWrapping.Wrap;
+            textBlock.TextAlignment = TextAlignment.Center;
             textBlock.HorizontalAlignment = HorizontalAlignment.Center;
             textBlock.VerticalAlignment = VerticalAlignment.Center;
 

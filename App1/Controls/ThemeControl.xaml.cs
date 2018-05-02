@@ -1,10 +1,7 @@
 ﻿using HashBoard;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-//using System.Drawing;
 using System.Linq;
-using System.Reflection;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.UI.Xaml;
@@ -15,6 +12,9 @@ namespace Hashboard
 {
     public partial class ThemeControl : UserControl
     {
+        public delegate void OnBackgroundBrushChanged();
+        private OnBackgroundBrushChanged BackgroundBrushChangedCallback;
+
         private static ApplicationDataContainer localSettings = ApplicationData.Current.LocalSettings;
         private static StorageFolder localFolder = ApplicationData.Current.LocalFolder;
 
@@ -77,9 +77,6 @@ namespace Hashboard
                     return ElementTheme.Dark;
             }
         }
-
-        private OnBackgroundBrushChanged BackgroundBrushChangedCallback;
-        public delegate void OnBackgroundBrushChanged();
 
         public ThemeControl(OnBackgroundBrushChanged backgroundBrushChangedCallback)
         {

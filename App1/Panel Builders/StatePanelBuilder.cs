@@ -14,7 +14,7 @@ namespace HashBoard
             Grid grid = new Grid();
             grid.Width = width;
             grid.Height = height;
-            grid.Padding = new Thickness(Padding);
+            grid.Padding = new Thickness(PanelMargins);
             
             TextBlock textBlock = new TextBlock();
             textBlock.Foreground = FontColorBrush;
@@ -22,6 +22,7 @@ namespace HashBoard
             textBlock.FontSize = FontSize.HasValue ? FontSize.Value : base.FontSize;
             textBlock.Text = entity.State;
             textBlock.TextWrapping = TextWrapping.Wrap;
+            textBlock.TextAlignment = TextAlignment.Center;
             textBlock.HorizontalAlignment = HorizontalAlignment.Center;
             textBlock.VerticalAlignment = VerticalAlignment.Center;
 

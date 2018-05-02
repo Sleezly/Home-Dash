@@ -1,8 +1,6 @@
 ﻿using Hashboard;
 using Microsoft.Toolkit.Uwp.UI.Controls;
-using System;
 using System.Collections.Generic;
-using Windows.UI;
 using Windows.UI.Text;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -18,12 +16,11 @@ namespace HashBoard
 
             if (entity.State == "on")
             {
-                RGB rgb = entity.GetColor();
-                backgroundBrush = new SolidColorBrush(Color.FromArgb(Convert.ToByte(255 * DefaultOpacity), rgb.R, rgb.G, rgb.B));
+                backgroundBrush = entity.GetColor().CreateSolidColorBrush();
             }
             else
             {
-                backgroundBrush = NoninteractiveBrush;
+                backgroundBrush = new SolidColorBrush(NoninteractiveBrushColor);
             }
 
             return CreatePanel(entity, width, height, backgroundBrush);
@@ -44,12 +41,11 @@ namespace HashBoard
             SolidColorBrush backgroundBrush;
             if (rgbList.Count > 0)
             {
-                RGB rgb = RGB.Average(rgbList);
-                backgroundBrush = new SolidColorBrush(Color.FromArgb(Convert.ToByte(255 * DefaultOpacity), rgb.R, rgb.G, rgb.B));
+                backgroundBrush = RGB.Average(rgbList).CreateSolidColorBrush();
             }
             else
             {
-                backgroundBrush = NoninteractiveBrush;
+                backgroundBrush = new SolidColorBrush(NoninteractiveBrushColor);
             }
 
             return CreatePanel(entity, width, height, backgroundBrush);
@@ -60,15 +56,16 @@ namespace HashBoard
             DockPanel panel = new DockPanel();
             panel.Width = width;
             panel.Height = height;
-
+            panel.Padding = new Thickness(PanelMargins);
             panel.Background = backgroundBrush;
 
             TextBlock textBlock = new TextBlock();
             textBlock.Foreground = FontColorBrush;
             textBlock.FontWeight = FontWeights.Bold;
-            textBlock.FontSize = 16;
+            textBlock.FontSize = FontSize;
             textBlock.Text = entity.Attributes["friendly_name"];
             textBlock.TextWrapping = TextWrapping.Wrap;
+            textBlock.TextAlignment = TextAlignment.Center;
             textBlock.HorizontalAlignment = HorizontalAlignment.Center;
             textBlock.VerticalAlignment = VerticalAlignment.Center;
             textBlock.FontSize = FontSize;
