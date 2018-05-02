@@ -40,7 +40,12 @@ namespace HashBoard
 
         private List<PanelBuilderBase> CustomEntities;
 
-        private CancellationTokenSource cancellationTokenSource;
+        // Polling thread cancellation token
+        private CancellationTokenSource PollingThreadCancellationToken;
+
+        // MQTT response worker thread and wakeup cancellation tokens
+        private CancellationTokenSource EntityUpdateRequestedQuitCancellationToken;
+        private CancellationTokenSource EntityUpdateRequestedWakeupCancellationToken;
 
         // Pxoximity sensors
         private DisplayRequest DisplayRequestSetting = new DisplayRequest();
@@ -138,12 +143,20 @@ namespace HashBoard
         /// Invoked immediately before the Page is unloaded and is no longer the current source of a parent Frame.
         /// </summary>
         /// <param name="e"></param>
-        protected override void OnNavigatingFrom(NavigatingCancelEventArgs e)
-        {
-            DisplayRequestSetting.RequestRelease();
+        //protected override void OnNavigatingFrom(NavigatingCancelEventArgs e)
+        //{
+        //    // Return the dispaly brightness control back to original setting
+        //    DisplayRequestSetting.RequestRelease();
 
-            base.OnNavigatingFrom(e);
-        }
+        //    // Terminate the polling thread if it was started
+        //    PollingThreadCancellationToken?.Cancel();
+
+        //    // Termiante the MQTT worker thread if it was started
+        //    EntityUpdateRequestedQuitCancellationToken?.Cancel();
+        //    EntityUpdateRequestedWakeupCancellationToken?.Cancel();
+
+        //    base.OnNavigatingFrom(e);
+        //}
 
         private void LoadEntityHandler()
         {
@@ -330,11 +343,11 @@ namespace HashBoard
         {
             if (SettingsControl.HomeAssistantPollingInterval == default(TimeSpan))
             {
-                if (cancellationTokenSource != null)
+                if (PollingThreadCancellationToken != null)
                 {
                     Debug.WriteLine($"{nameof(StartPollingThread)} stopping polling thread as polling interval is set to zero.");
 
-                    cancellationTokenSource.Cancel();
+                    PollingThreadCancellationToken.Cancel();
                 }
                 else
                 {
@@ -344,8 +357,8 @@ namespace HashBoard
             else
             {
                 // Kick off the entity updater thread to keep the data in sync
-                cancellationTokenSource = new CancellationTokenSource();
-                await Task.Run(() => PeriodicEntityUpdatePollingThread(cancellationTokenSource.Token), cancellationTokenSource.Token);
+                PollingThreadCancellationToken = new CancellationTokenSource();
+                await Task.Run(() => PeriodicEntityUpdatePollingThread(PollingThreadCancellationToken.Token), PollingThreadCancellationToken.Token);
             }
         }
 
@@ -368,6 +381,8 @@ namespace HashBoard
             if (!mqttSubscriber.IsSubscribed)
             {
                 mqttSubscriber.Connect();
+
+                Task.Factory.StartNew(MqttEntityUpdateRequestedResponseThread);
 
                 Debug.WriteLine($"{nameof(StartMqttSubscriber)} connecting to MQTT.");
             }
@@ -407,19 +422,48 @@ namespace HashBoard
 
                 if (string.IsNullOrEmpty(panelData.ActionToInvokeOnHold))
                 {
-                    SendPanelDataSimple((Panel)sender, panelData);
+                    SendPanelDataSimple(sender as Panel, panelData);
                 }
                 else
                 { 
                     if (popupUserControlList.Any(x => string.Equals(x, panelData.ActionToInvokeOnHold, StringComparison.InvariantCultureIgnoreCase)))
                     {
                         ShowPopupControl(panelData.ActionToInvokeOnHold, panelData.Entity, panelData.ChildrenEntities);
+
+                        // Restore the panel to original visual state
+                        MarkPanelAsDefaultState(sender as Panel);
                     }
                     else
                     {
                         SendPanelDataWithJson((Panel)sender, panelData, panelData.ActionToInvokeOnHold);
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Provide a visual indication that the panel has been pressed
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void PanelElement_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            // Hack to allow mouse presses to behave like tap+hold as it would on a touch screen device
+            MousePressStartTime = DateTime.Now;
+
+            MarkPanelAsPressed(sender as Panel);
+        }
+
+        /// <summary>
+        /// When pointer is no longer in contact with a panel, restore it's color to original background brush.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void PanelElement_PointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            if (e.Pointer.IsInContact)
+            {
+                MarkPanelAsDefaultState(sender as Panel);
             }
         }
 
@@ -457,94 +501,171 @@ namespace HashBoard
             }
         }
 
-        private void SendPanelDataSimple(Panel panel, PanelData panelData)
-        {
-            WebRequests.SendActionNoData(panelData.Entity.EntityId);
-
-            panelData.Entity.State = "updating...";// panelData.Entity.GetToggledState();
-            panelData.Entity.LastUpdated = DateTime.Now;
-
-            UpdateChildPanelIfneeded(panel, new List<Entity>() { panelData.Entity });
-        }
-
         /// <summary>
-        /// Iteract with the provided Data Panel and update the UI and children Panels where applicable.
+        /// Send data request to Home Assistant with no JSON body in the request.
         /// </summary>
         /// <param name="panel"></param>
         /// <param name="panelData"></param>
-        private void SendPanelDataWithJson(Panel panel, PanelData panelData, string actionToInvoke)
+        private void SendPanelDataSimple(Panel panel, PanelData panelData)
         {
+            MarkPanelAsUpdateRequired(panel);
+
             if (panelData.ChildrenEntities != null)
             {
-                WebRequests.SendAction(actionToInvoke, panelData.ChildrenEntities.Select(x => x.EntityId));
-
-                // Toggle the state of the root and children entities
-                //panelData.Entity.State = panelData.Entity.GetToggledState();
-                panelData.Entity.State = "updating...";
-                panelData.Entity.LastUpdated = DateTime.Now;
-
-                foreach (Entity child in panelData.ChildrenEntities)
-                {
-                    child.State = "updating..."; // child.GetToggledState();
-                    child.LastUpdated = DateTime.Now;
-                }
-
-                UpdateChildPanelIfneeded((FrameworkElement)this.Content, panelData.ChildrenEntities.Union(new List<Entity> { panelData.Entity }));
+                throw new NotImplementedException();
             }
             else
             {
-                WebRequests.SendAction(panelData.Entity.EntityId, actionToInvoke);
-
-                panelData.Entity.State = "updating..."; ///panelData.Entity.GetToggledState();
-                panelData.Entity.LastUpdated = DateTime.Now;
-
-                UpdateChildPanelIfneeded(panel, new List<Entity>() { panelData.Entity });
+                WebRequests.SendActionNoData(panelData.Entity.EntityId);
             }
         }
 
-        private void PanelElement_PointerPressed(object sender, PointerRoutedEventArgs e)
+        /// <summary>
+        /// Send data request to Home Assistant against to the provided service.
+        /// </summary>
+        /// <param name="panel"></param>
+        /// <param name="panelData"></param>
+        private void SendPanelDataWithJson(Panel panel, PanelData panelData, string serviceToInvoke)
         {
-            MousePressStartTime = DateTime.Now;
+            MarkPanelAsUpdateRequired(panel);
 
-            Panel panel = sender as Panel;
-
-            panel.Background = new SolidColorBrush(Color.FromArgb(80, Colors.LightGray.R, Colors.LightGray.G, Colors.LightGray.B));
-        }
-
-        private void PanelElement_PointerExited(object sender, PointerRoutedEventArgs e)
-        {
-            Panel panel = sender as Panel;
-
-            panel.Background = PanelData.GetPanelData(sender).BackgroundBrush;
-        }
-
-        // Don't overload the system on start
-        private DateTime lastRefreshTime = DateTime.Now.AddSeconds(10);
-
-        private async void OnEntityUpdated(string entityId)
-        {
-            // Prevent flooding by disallowing multiple requests to be queued up over a short period
-            if (lastRefreshTime.AddSeconds(3) < DateTime.Now)
+            if (panelData.ChildrenEntities != null)
             {
-                lastRefreshTime = DateTime.Now;
+                WebRequests.SendAction(serviceToInvoke, panelData.ChildrenEntities.Select(x => x.EntityId));
 
-                //Entity entity = await WebRequests.GetData<Entity>($"api/states/{entityId}");
-                // Get all entities -- this ensures mutliple entities will be updated at the same time
-                // and ensure group entities may update if needed as well.
-                IEnumerable<Entity> entities = await WebRequests.GetData<IEnumerable<Entity>>($"api/states");
+                Panel parentPanel = (Panel)VisualTreeHelper.GetParent(panel);
+                int indexOfGroupPanel = parentPanel.Children.IndexOf(panel);
 
-                await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+                for (int i = indexOfGroupPanel + 1; i < indexOfGroupPanel + 1 + panelData.ChildrenEntities.Count(); i++)
                 {
-                    lock (this.Content)
-                    {
-                        UpdateChildPanelIfneeded((FrameworkElement)this.Content, entities);
-                    }
-                });
+                    MarkPanelAsUpdateRequired(parentPanel.Children[i] as Panel);
+                }
             }
-            //else
-            //{
-            //    Debug.WriteLine($"{nameof(OnEntityUpdated)} - Updated too recently, ignoring update for: {entityId}.");
-            //}
+            else
+            {
+                WebRequests.SendAction(panelData.Entity.EntityId, serviceToInvoke);
+            }
+        }
+
+        /// <summary>
+        /// Sets a visual indicator on the provided panel to suggest an entity state update is now pending.
+        /// </summary>
+        /// <param name="panel"></param>
+        private void MarkPanelAsUpdateRequired(Panel panel)
+        {
+            panel.Background = new SolidColorBrush(Color.FromArgb(60, Colors.Lime.R, Colors.Lime.G, Colors.Lime.B));
+        }
+
+        /// <summary>
+        /// Sets a visual indicator on the provided panel to show it is being pressed with a mouse or touch input.
+        /// </summary>
+        /// <param name="panel"></param>
+        private void MarkPanelAsPressed(Panel panel)
+        {
+            panel.Background.Opacity = PanelBuilderBase.PressedOpacity;
+        }
+
+        /// <summary>
+        /// Returns the panel to default state after a pressed event has occurred.
+        /// </summary>
+        /// <param name="panel"></param>
+        private void MarkPanelAsDefaultState(Panel panel)
+        {
+            panel.Background.Opacity = PanelBuilderBase.DefaultOpacity;
+        }
+
+        /// <summary>
+        /// Update the given entities on the UI thread.
+        /// </summary>
+        /// <param name="entitiesToUpdate"></param>
+        /// <param name="allEntities"></param>
+        private async void UpdateEntityPanels(IEnumerable<Entity> entitiesToUpdate, IEnumerable<Entity> allEntities)
+        {
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                UpdateChildPanelIfneeded((FrameworkElement)this.Content, allEntities, entitiesToUpdate);
+            });
+        }
+
+        /// <summary>
+        /// MQTT callback to signal an update is requested. Queue up an event to wake up te MQTT worker thread.
+        /// </summary>
+        /// <param name="entityId"></param>
+        private void OnEntityUpdated(string entityId)
+        {
+            // Set the event token signal -- very important to avoid blocking this thread since this is doing work
+            // on the MQTT subscriber thread and will block additional entity updates from being requested.
+            EntityUpdateRequestedWakeupCancellationToken.Cancel();
+        }
+
+        /// <summary>
+        /// MQTT response is requested background worker thread. Wakes up via cancellation token to queue up a query
+        /// to Home Assistant and then triggers a UI update. Once done, resets event token and goes back to sleep.
+        /// </summary>
+        private async void MqttEntityUpdateRequestedResponseThread()
+        {
+            Debug.WriteLine($"{nameof(MqttEntityUpdateRequestedResponseThread)} is now starting.");
+
+            if (EntityUpdateRequestedQuitCancellationToken != null)
+            {
+                throw new ArgumentException($"{nameof(MqttEntityUpdateRequestedResponseThread)} cancellation token was not NULL.");
+            }
+
+            EntityUpdateRequestedQuitCancellationToken = new CancellationTokenSource();
+            EntityUpdateRequestedWakeupCancellationToken = new CancellationTokenSource();
+
+            DateTime lastUpdatedTime = DateTime.Now;
+
+            while (!EntityUpdateRequestedQuitCancellationToken.IsCancellationRequested)
+            {
+                // Sleep until the event token is signaled
+                EntityUpdateRequestedWakeupCancellationToken.Token.WaitHandle.WaitOne();
+
+                // Allow for additional MQTT messages to be received before proceeding since it's likely there will be multiple entities
+                // requesting an update at the same time.
+                await Task.Delay(100);
+
+                // Current token has been consumed so create a new token now
+                EntityUpdateRequestedWakeupCancellationToken = new CancellationTokenSource();
+
+                // Confirm cancelation is not requested first
+                if (!EntityUpdateRequestedQuitCancellationToken.IsCancellationRequested)
+                {
+                    // Get all entities not just the entities we think we want
+                    IEnumerable<Entity> allEntities = await WebRequests.GetData<IEnumerable<Entity>>($"api/states");
+
+                    // Get all entities which have been updated since the last time we've checked
+                    IEnumerable<Entity> entitiesToUpdate = allEntities.Where(x => x.LastUpdated > lastUpdatedTime).ToList();
+
+                    if (entitiesToUpdate.Any())
+                    {
+                        // For all entities which need to be updated, get all group entities and check their children to see if the group entity needs to be updated as well
+                        lastUpdatedTime = entitiesToUpdate.Select(x => x.LastUpdated).OrderByDescending(x => x).First();
+
+                        foreach (Entity group in allEntities.Where(x => x.Attributes.ContainsKey("entity_id")))
+                        {
+                            IEnumerable<string> childrenEntityIds = (group.Attributes["entity_id"] as Newtonsoft.Json.Linq.JArray).ToString().Split("\"").Where(x => x.Contains("."));
+
+                            if (childrenEntityIds.Any(x => entitiesToUpdate.Any(y => y.EntityId.Equals(x, StringComparison.InvariantCultureIgnoreCase))))
+                            {
+                                if (!entitiesToUpdate.Any(x => x.EntityId == group.EntityId))
+                                {
+                                    // Add this group entity which is missing from the update requested list
+                                    Debug.WriteLine($"{nameof(MqttEntityUpdateRequestedResponseThread)} manually adding group {group.EntityId} to update list.");
+                                    entitiesToUpdate = entitiesToUpdate.Union(new List<Entity>() { group });
+                                }
+                            }
+                        }
+
+                        Debug.WriteLine($"{nameof(MqttEntityUpdateRequestedResponseThread)} has updated Entities: {string.Join(", ", entitiesToUpdate.Select(x => x.EntityId).ToList())}");
+
+                        // Perform the update on the UI thread; don't block
+                        UpdateEntityPanels(entitiesToUpdate, allEntities);
+                    }
+                }
+            }
+
+            Debug.WriteLine($"{nameof(MqttEntityUpdateRequestedResponseThread)} is now terminating.");
         }
 
         /// <summary>
@@ -599,7 +720,7 @@ namespace HashBoard
                         // Shared resource
                         lock (this.Content)
                         {
-                            UpdateChildPanelIfneeded((FrameworkElement)this.Content, allEntities);
+                            //UpdateChildPanelIfneeded((FrameworkElement)this.Content, allEntities);
                         }
                     });
                 }
@@ -617,14 +738,19 @@ namespace HashBoard
         /// </summary>
         /// <param name="element"></param>
         /// <param name="allEntities"></param>
-        private void UpdateChildPanelIfneeded(FrameworkElement element, IEnumerable<Entity> allEntities)
+        private void UpdateChildPanelIfneeded(FrameworkElement element, IEnumerable<Entity> allEntities, IEnumerable<Entity> entitiesToUpdate = null)
         {
             PanelData panelData = PanelData.GetPanelData(element);
 
             // Only scan UI Elements which have PanelData as this signifies a panel element with data to process
             if (panelData != null)
             {
-                Entity entity = allEntities.FirstOrDefault(x => x.EntityId == panelData.Entity.EntityId);
+                if (null == entitiesToUpdate)
+                {
+                    entitiesToUpdate = allEntities;
+                }
+
+                Entity entity = entitiesToUpdate.FirstOrDefault(x => x.EntityId == panelData.Entity.EntityId);
 
                 // Some panels, such as the custom Settings panel, are not backed by entity data so skip those here
                 if (entity != null)
@@ -657,7 +783,8 @@ namespace HashBoard
 
                     parentPanel.Children[indexOfElement] = panel;
 
-                    //Debug.WriteLine($"Replaced Panel: {entity.EntityId}.");
+                    // if (panelData.LastDashboardtaUpdate)
+                    Debug.WriteLine($"Replaced Panel: {entity.EntityId}.");
                 }
             }
             else
@@ -667,7 +794,7 @@ namespace HashBoard
                 for (int i = 0; i < childCount; i++)
                 {
                     DependencyObject obj = VisualTreeHelper.GetChild(element, i);
-                    UpdateChildPanelIfneeded((FrameworkElement)obj, allEntities);
+                    UpdateChildPanelIfneeded((FrameworkElement)obj, entitiesToUpdate, allEntities);
                 }
             }
         }

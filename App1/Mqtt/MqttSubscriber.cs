@@ -94,12 +94,10 @@ namespace HashBoard
         /// <param name="e"></param>
         private void OnMessageReceviedWorker(object sender, MqttMsgPublishEventArgs e)
         {
-            string message = Encoding.UTF8.GetString(e.Message);
-            string entityId = $"{e.Topic.Split('/')[1]}.{e.Topic.Split('/')[2]}";
+            //string message = Encoding.UTF8.GetString(e.Message);
+            //string entityId = $"{e.Topic.Split('/')[1]}.{e.Topic.Split('/')[2]}";
 
-            Debug.WriteLine($"MQTT:  {entityId} - {message}");
-
-            EntityUpdatedCallback(entityId);
+            EntityUpdatedCallback(string.Empty);
         }
     }
 }

@@ -14,7 +14,7 @@ namespace HashBoard
             Grid grid = new Grid();
             grid.Width = width;
             grid.Height = height;
-            grid.Opacity = CellOpacity;
+            grid.Opacity = DefaultOpacity;
 
             TextBlock textBlock = new TextBlock();
             textBlock.Foreground = FontColorBrush;

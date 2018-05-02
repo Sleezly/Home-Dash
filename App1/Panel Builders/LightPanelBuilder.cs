@@ -1,5 +1,6 @@
 ﻿using Hashboard;
 using Microsoft.Toolkit.Uwp.UI.Controls;
+using System;
 using System.Collections.Generic;
 using Windows.UI;
 using Windows.UI.Text;
@@ -18,7 +19,7 @@ namespace HashBoard
             if (entity.State == "on")
             {
                 RGB rgb = entity.GetColor();
-                backgroundBrush = new SolidColorBrush(Color.FromArgb(CellOpacity, rgb.R, rgb.G, rgb.B));
+                backgroundBrush = new SolidColorBrush(Color.FromArgb(Convert.ToByte(255 * DefaultOpacity), rgb.R, rgb.G, rgb.B));
             }
             else
             {
@@ -44,7 +45,7 @@ namespace HashBoard
             if (rgbList.Count > 0)
             {
                 RGB rgb = RGB.Average(rgbList);
-                backgroundBrush = new SolidColorBrush(Color.FromArgb(CellOpacity, rgb.R, rgb.G, rgb.B));
+                backgroundBrush = new SolidColorBrush(Color.FromArgb(Convert.ToByte(255 * DefaultOpacity), rgb.R, rgb.G, rgb.B));
             }
             else
             {

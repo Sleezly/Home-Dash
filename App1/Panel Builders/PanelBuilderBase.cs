@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using Windows.UI;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 
@@ -16,15 +15,15 @@ namespace HashBoard
 
         protected const int Padding = 6;
 
-        protected const byte CellOpacity = 160;
+        public const double DefaultOpacity = 0.8;
+
+        public const double PressedOpacity = 0.35;
 
         protected SolidColorBrush LightGrayBrushAlmostTransparent = new SolidColorBrush(Color.FromArgb(40, Colors.LightGray.R, Colors.LightGray.G, Colors.LightGray.B));
 
-        protected SolidColorBrush LightGrayBrush = new SolidColorBrush(Color.FromArgb(CellOpacity, Colors.LightGray.R, Colors.LightGray.G, Colors.LightGray.B));
+        protected SolidColorBrush LightGrayBrush = new SolidColorBrush(Color.FromArgb(Convert.ToByte(255 * DefaultOpacity), Colors.LightGray.R, Colors.LightGray.G, Colors.LightGray.B));
 
-        protected SolidColorBrush NoninteractiveBrush = new SolidColorBrush(Color.FromArgb(CellOpacity, Colors.Black.R, Colors.Black.G, Colors.Black.B));
-
-        //protected SolidColorBrush InteractiveBrush = new SolidColorBrush(Color.FromArgb(CellOpacity, Colors.RoyalBlue.R, Colors.RoyalBlue.G, Colors.RoyalBlue.B));
+        protected SolidColorBrush NoninteractiveBrush = new SolidColorBrush(Color.FromArgb(Convert.ToByte(255 * DefaultOpacity), Colors.Black.R, Colors.Black.G, Colors.Black.B));
 
         protected SolidColorBrush FontColorBrush = new SolidColorBrush(Colors.White);
 
@@ -100,24 +99,17 @@ namespace HashBoard
                 }
                 else
                 {
-                    //panel.Background = ThemeControl.AccentColorBrush;
-
-                    panel.Background = new SolidColorBrush(Color.FromArgb(
-                        CellOpacity,
-                        ThemeControl.AccentColorBrush.Color.R,
-                        ThemeControl.AccentColorBrush.Color.G,
-                        ThemeControl.AccentColorBrush.Color.B));
+                    panel.Background = ThemeControl.AccentColorBrush;
+                    panel.Background.Opacity = DefaultOpacity;
                 }
             }
 
             panel.Tag = new PanelData()
             {
-                BackgroundBrush = panel.Background,
                 Entity = entity,
                 ChildrenEntities = childrenEntities,
                 ActionToInvokeOnTap = TapEventAction,
                 ActionToInvokeOnHold = HoldEventAction,
-                LastDashboardtaUpdate = DateTime.Now,
             };
         }
 
