@@ -21,7 +21,7 @@ namespace HashBoard
             textBlock.Foreground = FontColorBrush;
             textBlock.FontWeight = FontWeights.Bold;
             textBlock.FontSize = FontSize.HasValue ? FontSize.Value : base.FontSize;
-            textBlock.Text = entity.Attributes["friendly_name"];
+            textBlock.Text = entity.Attributes["friendly_name"] ?? string.Empty;
             textBlock.TextWrapping = TextWrapping.Wrap;
             textBlock.TextAlignment = TextAlignment.Center;
             textBlock.HorizontalAlignment = HorizontalAlignment.Center;

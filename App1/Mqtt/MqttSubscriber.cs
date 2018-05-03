@@ -28,6 +28,7 @@ namespace HashBoard
             { 3, "The Network Connection has been made but the MQTT service is unavailable." },
             { 4, "The data in the user name or password is malformed." },
             { 5, "The Client is not authorized to connect." },
+            { 255, string.Empty },
         };
 
         public bool IsSubscribed{ get; set; } 
@@ -52,22 +53,32 @@ namespace HashBoard
             {
                 Task.Factory.StartNew(() =>
                 {
-                    client = new MqttClient(SettingsControl.MqttBrokerHostname);
-
-                    client.MqttMsgPublishReceived += OnMessageReceviedWorker;
-
-                    byte response = client.Connect(Guid.NewGuid().ToString(), SettingsControl.MqttUsername, SettingsControl.MqttPassword);
-
-                    if (response == 0)
+                    byte response = 255;
+                    try
                     {
-                        client.Subscribe(new string[] { SettingsControl.MqttStateStream }, new byte[] { 2 });
+                        client = new MqttClient(SettingsControl.MqttBrokerHostname);
 
-                        IsSubscribed = true;
+                        client.MqttMsgPublishReceived += OnMessageReceviedWorker;
+
+                        response = client.Connect(Guid.NewGuid().ToString(), SettingsControl.MqttUsername, SettingsControl.MqttPassword);
+
+                        if (response == 0)
+                        {
+                            client.Subscribe(new string[] { SettingsControl.MqttStateStream }, new byte[] { 2 });
+
+                            IsSubscribed = true;
+                        }
+
+                        Status = ConnackResponseCodes[response];
                     }
-
-                    Status = ConnackResponseCodes[response];
-
-                    OnConnectCallback(response);
+                    catch (Exception e)
+                    {
+                        Status = e.Message;
+                    }
+                    finally
+                    { 
+                        OnConnectCallback(response);
+                    }
                 });
             }
         }

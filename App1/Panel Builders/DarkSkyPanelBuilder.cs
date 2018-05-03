@@ -24,15 +24,22 @@ namespace HashBoard
             panel.CacheMode = new BitmapCache();
 
             TextBlock textDate = new TextBlock();
-            textDate.Text = entity.Attributes["friendly_name"];
+            textDate.Text = entity.Attributes["friendly_name"] ?? string.Empty;
             textDate.HorizontalAlignment = HorizontalAlignment.Center;
             textDate.VerticalAlignment = VerticalAlignment.Top;
             textDate.Foreground = FontColorBrush;
 
-            Image image = GetWeatherImage(entity.Attributes["icon"]);
-            image.Width = panel.Width - PanelPadding * 2;
-            image.VerticalAlignment = VerticalAlignment.Center;
-            image.HorizontalAlignment = HorizontalAlignment.Center;
+            panel.Children.Add(textDate);
+
+            if (entity.Attributes.ContainsKey("icon"))
+            {
+                Image image = GetWeatherImage(entity.Attributes["icon"]);
+                image.Width = panel.Width - PanelPadding * 2;
+                image.VerticalAlignment = VerticalAlignment.Center;
+                image.HorizontalAlignment = HorizontalAlignment.Center;
+
+                panel.Children.Add(image);
+            }
 
             TextBlock textTemperature = new TextBlock();
             textTemperature.Text = string.Join(" | ", entity.State.Split('/'));
@@ -40,8 +47,6 @@ namespace HashBoard
             textTemperature.VerticalAlignment = VerticalAlignment.Bottom;
             textTemperature.Foreground = FontColorBrush;
 
-            panel.Children.Add(textDate);
-            panel.Children.Add(image);
             panel.Children.Add(textTemperature);
 
             return panel;

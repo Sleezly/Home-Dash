@@ -18,7 +18,7 @@ namespace HashBoard
             grid.Padding = new Thickness(PanelMargins);
 
             TextBlock textName = new TextBlock();
-            textName.Text = entity.Attributes["friendly_name"];
+            textName.Text = entity.Attributes["friendly_name"] ?? string.Empty;
             textName.FontSize = FontSize;
             textName.TextWrapping = TextWrapping.Wrap;
             textName.TextAlignment = TextAlignment.Center;

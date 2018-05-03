@@ -13,6 +13,7 @@ using Windows.UI;
 using Windows.UI.Core;
 using Windows.UI.Input;
 using Windows.UI.Popups;
+using Windows.UI.Text;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -94,7 +95,8 @@ namespace HashBoard
 
             // Set the theme
             ScrollViewer scrollViewer = this.FindName("MainScrollView") as ScrollViewer;
-            scrollViewer.Background = ThemeControl.BackgroundBrush;
+            //scrollViewer.Background = ThemeControl.BackgroundBrush;
+            scrollViewer.Background = new SolidColorBrush(Colors.Black);
 
             LoadCustomEntityHandler();
         }
@@ -152,8 +154,6 @@ namespace HashBoard
 
                     if (PreviousDisplayBrightness != brightness)
                     {
-                        //Debug.WriteLine($"LightSensorReading: {lightSensorReading.IlluminanceInLux.ToString()}. Setting brightness to {brightness.ToString()}.");
-
                         BrightnessOverrideSetting.SetBrightnessLevel(brightness, DisplayBrightnessOverrideOptions.None);
 
                         PreviousDisplayBrightness = brightness;
@@ -185,15 +185,18 @@ namespace HashBoard
         {
             CustomEntities = new List<PanelBuilderBase>()
             {
+                // Date/Time sensor
                 new DateTimePanelBuilder() {
                     EntityIdStartsWith = "sensor.date__time",
                     Size = EntitySize.Wide,
                     FontSize = 24 },
 
+                // Dark Sky summary
                 new StateOnlyPanelBuilder() {
                     EntityIdStartsWith = "sensor.dark_sky_daily_summary",
                     Size = EntitySize.Wide },
 
+                // Dark Sky temperature
                 new StateOnlyPanelBuilder() {
                     EntityIdStartsWith = "sensor.dark_sky_temperature",
                     FontSize = 32 },
@@ -205,6 +208,7 @@ namespace HashBoard
                     EntityIdStartsWith = "sensor.forecast_",
                     Size = EntitySize.Condensed },
 
+                // Climate Platform
                 new ClimatePanelBuilder() {
                     EntityIdStartsWith = "climate.",
                     FontSize = 32,
@@ -216,6 +220,7 @@ namespace HashBoard
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
 
+                // Media Player Platform
                 new MediaPlayerPanelBuilder() {
                     EntityIdStartsWith = "media_player.",
                     TapEventAction = "media_play_pause",
@@ -226,6 +231,7 @@ namespace HashBoard
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
 
+                // Light Platform
                 new LightPanelBuilder() {
                     EntityIdStartsWith = "light.",
                     TapEventAction = "toggle",
@@ -235,6 +241,7 @@ namespace HashBoard
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
 
+                // Script Platform
                 new NameOnlyPanelBuilder() {
                     EntityIdStartsWith = "script.",
                     TapEventHandler = PanelElement_Tapped,
@@ -242,6 +249,7 @@ namespace HashBoard
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
 
+                // Switch Platform
                 new GenericPanelBuilder() {
                     EntityIdStartsWith = "switch.",
                     TapEventAction = "toggle",
@@ -250,6 +258,7 @@ namespace HashBoard
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
 
+                // Automation Platform
                 new GenericPanelBuilder() {
                     EntityIdStartsWith = "automation.",
                     TapEventAction = "trigger",
@@ -258,7 +267,8 @@ namespace HashBoard
                     HoldEventHandler = PanelElement_Holding,
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
-
+                
+                // Hasboard Settings Control Panel
                 new NameOnlyPanelBuilder() {
                     EntityIdStartsWith = $"{SettingsControlPanelName}.",
                     TapEventAction = nameof(SettingsControl),
@@ -266,6 +276,7 @@ namespace HashBoard
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
 
+                // Hasboard Theme Control Panel
                 new NameOnlyPanelBuilder() {
                     EntityIdStartsWith = $"{ThemeControlMenuPanelName}.",
                     TapEventAction = nameof(ThemeControl),
@@ -273,6 +284,7 @@ namespace HashBoard
                     PressedEventHandler = PanelElement_PointerPressed,
                     ReleasedEventHandler = PanelElement_PointerExited},
 
+                // Everything else
                 new GenericPanelBuilder() { EntityIdStartsWith = string.Empty },
             };
         }
@@ -354,8 +366,8 @@ namespace HashBoard
         private async void UpdateMainFrameWithNewTheme()
         {
             // Set the theme (in case it changed)
-            ScrollViewer scrollViewer = this.FindName("MainScrollView") as ScrollViewer;
-            scrollViewer.Background = ThemeControl.BackgroundBrush;
+            //ScrollViewer scrollViewer = this.FindName("MainScrollView") as ScrollViewer;
+            //scrollViewer.Background = ThemeControl.BackgroundBrush;
 
             // Completely reload the UI to bring in a new theme
             await LoadFrame();
@@ -427,8 +439,8 @@ namespace HashBoard
             {
                 await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
                 {
-                    MessageDialog dialog = new MessageDialog($"Failed to connect to MQTT broker '{SettingsControl.MqttBrokerHostname}'." +
-                        $"Response '{connectionResponse}': '{mqttSubscriber.Status}'.", "MQTT Broker");
+                    MessageDialog dialog = new MessageDialog($"Failed to connect to MQTT broker '{SettingsControl.MqttBrokerHostname}'. " +
+                        $"Response '[{connectionResponse}]': '{mqttSubscriber.Status}'.", "MQTT Broker");
 
                     await dialog.ShowAsync();
                 });
@@ -641,7 +653,9 @@ namespace HashBoard
 
             if (EntityUpdateRequestedQuitCancellationToken != null)
             {
-                throw new ArgumentException($"{nameof(MqttEntityUpdateRequestedResponseThread)} cancellation token was not NULL.");
+                // Already running so simply leave
+                return;
+                //throw new ArgumentException($"{nameof(MqttEntityUpdateRequestedResponseThread)} cancellation token was not NULL.");
             }
 
             EntityUpdateRequestedQuitCancellationToken = new CancellationTokenSource();
@@ -668,12 +682,12 @@ namespace HashBoard
                     IEnumerable<Entity> allEntities = await WebRequests.GetData<IEnumerable<Entity>>($"api/states");
 
                     // Get all entities which have been updated since the last time we've checked
-                    IEnumerable<Entity> entitiesToUpdate = allEntities.Where(x => x.LastUpdated > lastUpdatedTime).ToList();
+                    IEnumerable<Entity> entitiesToUpdate = allEntities.Where(x => x.LastChanged > lastUpdatedTime).ToList();
 
                     if (entitiesToUpdate.Any())
                     {
                         // For all entities which need to be updated, get all group entities and check their children to see if the group entity needs to be updated as well
-                        lastUpdatedTime = entitiesToUpdate.Select(x => x.LastUpdated).OrderByDescending(x => x).First();
+                        lastUpdatedTime = entitiesToUpdate.Select(x => x.LastChanged).OrderByDescending(x => x).First();
 
                         foreach (Entity group in allEntities.Where(x => x.Attributes.ContainsKey("entity_id")))
                         {
@@ -700,7 +714,7 @@ namespace HashBoard
 
             Debug.WriteLine($"{nameof(MqttEntityUpdateRequestedResponseThread)} is now terminating.");
         }
-
+        
         /// <summary>
         /// Queries Home Assistant for state information and then populates the main view with panels to 
         /// show the state information.
@@ -709,6 +723,8 @@ namespace HashBoard
         private async Task LoadFrame()
         {
             ScrollViewer scrollViewer = this.FindName("MainScrollView") as ScrollViewer;
+            scrollViewer.Background = ThemeControl.BackgroundBrush;
+
             StackPanel stackPanel = null;
 
             if (!string.IsNullOrEmpty(SettingsControl.HomeAssistantHostname))
@@ -722,10 +738,11 @@ namespace HashBoard
                 stackPanel = CreateViews(new List<Entity>());
             }
 
-            lock (this.Content)
-            {
-                scrollViewer.Content = stackPanel;
-            }
+            scrollViewer.Content = stackPanel;
+
+            // By setting a center horizontal aligntment we trim off the edges so that the dead space around
+            // the left and right edges of the screen will render black.
+            scrollViewer.HorizontalAlignment = HorizontalAlignment.Center;
         }
 
         /// <summary>
@@ -751,10 +768,8 @@ namespace HashBoard
                     await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
                     {
                         // Shared resource
-                        lock (this.Content)
-                        {
+                        throw new NotImplementedException("need to revist this ...");
                             //UpdateChildPanelIfneeded((FrameworkElement)this.Content, allEntities);
-                        }
                     });
                 }
 
@@ -788,10 +803,6 @@ namespace HashBoard
                 // Some panels, such as the custom Settings panel, are not backed by entity data so skip those here
                 if (entity != null)
                 {
-                    // Don't try to be fancy here. Simply update all entities as this is cheaper, easier and less 
-                    // error-prone than attempt to identify which entity needs to be updated and which doesn't
-                    // or which group(s) an entity is associated with, etc.
-
                     Panel panel;
 
                     if (entity.Attributes.ContainsKey("entity_id"))
@@ -811,12 +822,8 @@ namespace HashBoard
                     // Replace the old panel with the new panel
                     Panel parentPanel = (Panel)VisualTreeHelper.GetParent(element);
                     int indexOfElement = parentPanel.Children.IndexOf(element);
-                    //parentPanel.Children.RemoveAt(indexOfElement);
-                    //parentPanel.Children.Insert(indexOfElement, panel);
-
                     parentPanel.Children[indexOfElement] = panel;
 
-                    // if (panelData.LastDashboardtaUpdate)
                     Debug.WriteLine($"Replaced Panel: {entity.EntityId}.");
                 }
             }
@@ -893,6 +900,19 @@ namespace HashBoard
             // Add all single and group entities which are tied to each view
             foreach (Entity entityHeader in entityHeaders)
             {
+                Grid grid = new Grid();
+                grid.Background = new SolidColorBrush(Colors.Black);
+                grid.Background.Opacity = 0.4;
+                grid.Padding = new Thickness(6);
+
+                TextBlock textBlock = new TextBlock();
+                textBlock.Text = Convert.ToString(entityHeader.Attributes["friendly_name"]);
+                textBlock.FontSize = 18;
+                textBlock.FontWeight = FontWeights.Bold;
+
+                grid.Children.Add(textBlock);
+
+                stackPanel.Children.Add(grid);
                 stackPanel.Children.Add(CreateEntitiesInView(entityHeader, allEntities));
             }
 
@@ -902,7 +922,7 @@ namespace HashBoard
             WrapPanel customWrapPanel = CreateCustomGroupPanel(new List<Entity>() { settingsEntity, themeEntity });
 
             stackPanel.Children.Add(customWrapPanel);
-                        
+
             return stackPanel;
         }
 

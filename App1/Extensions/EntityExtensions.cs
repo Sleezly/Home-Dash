@@ -28,6 +28,8 @@ namespace Hashboard
                     return "paused";
                 case "paused":
                     return "playing";
+                case "idle":
+                    return "playing";
                 case "1":
                     return "0";
                 case "0":
@@ -50,6 +52,7 @@ namespace Hashboard
                 case "off":
                 case "paused":
                 case "0":
+                case "idle":
                     return true;
 
                 default:

@@ -18,7 +18,7 @@ namespace HashBoard
             grid.Padding = new Thickness(PanelMargins);
 
             TextBlock textName = new TextBlock();
-            textName.Text = entity.Attributes["friendly_name"];
+            textName.Text = entity.Attributes["friendly_name"] ?? string.Empty;
             textName.FontSize = FontSize;
             textName.TextWrapping = TextWrapping.Wrap;
             textName.TextAlignment = TextAlignment.Center;
@@ -31,7 +31,7 @@ namespace HashBoard
             textBlock.FontWeight = FontWeights.Bold;
             textBlock.FontSize = FontSize;
             textBlock.Text = string.IsNullOrEmpty(ValueTextFromAttributeOverride) ? entity.State :
-                Convert.ToString(entity.Attributes[ValueTextFromAttributeOverride]);
+                Convert.ToString(entity.Attributes[ValueTextFromAttributeOverride] ?? string.Empty);
             textBlock.TextWrapping = TextWrapping.Wrap;
             textBlock.TextAlignment = TextAlignment.Center;
             textBlock.HorizontalAlignment = HorizontalAlignment.Center;

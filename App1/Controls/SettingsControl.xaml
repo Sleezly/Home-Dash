@@ -13,7 +13,7 @@
         </Grid>
         <Grid Padding="4">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">Hostname:</TextBlock>
-            <TextBox x:Name="HomeAssistantHostnameText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="hassio.local"></TextBox>
+            <TextBox x:Name="HomeAssistantHostnameText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="192.168.1.2"></TextBox>
         </Grid>
         <Grid Padding="4">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">Port:</TextBlock>
@@ -32,7 +32,7 @@
         </Grid>
         <Grid Padding="4">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">Broker Hostname:</TextBlock>
-            <TextBox x:Name="MqttBrokerHostnameText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="hassio.local"></TextBox>
+            <TextBox x:Name="MqttBrokerHostnameText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="192.168.1.2"></TextBox>
         </Grid>
         <Grid Padding="4">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">Broker Username:</TextBlock>

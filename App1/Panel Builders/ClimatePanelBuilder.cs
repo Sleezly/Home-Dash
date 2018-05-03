@@ -19,7 +19,7 @@ namespace HashBoard
             grid.Padding = new Thickness(PanelMargins);
 
             TextBlock textName = new TextBlock();
-            textName.Text = entity.Attributes["friendly_name"];
+            textName.Text = entity.Attributes["friendly_name"] ?? string.Empty;
             textName.FontSize = base.FontSize;
             textName.TextWrapping = TextWrapping.Wrap;
             textName.HorizontalAlignment = HorizontalAlignment.Center;
@@ -31,7 +31,8 @@ namespace HashBoard
             textTemperature.Foreground = FontColorBrush;
             textTemperature.FontWeight = FontWeights.Bold;
             textTemperature.FontSize = FontSize.HasValue ? FontSize.Value : base.FontSize;
-            textTemperature.Text = Convert.ToString(entity.Attributes["temperature"]);
+            textTemperature.Text = entity.Attributes["temperature"] != null ?
+                Convert.ToString(entity.Attributes["temperature"]) : entity.State;
             textTemperature.TextWrapping = TextWrapping.Wrap;
             textTemperature.HorizontalAlignment = HorizontalAlignment.Center;
             textTemperature.VerticalAlignment = VerticalAlignment.Center;
@@ -40,7 +41,8 @@ namespace HashBoard
             textCurrentTemperature.Foreground = FontColorBrush;
             textCurrentTemperature.FontWeight = FontWeights.Bold;
             textCurrentTemperature.FontSize = 14;
-            textCurrentTemperature.Text = "Actual: " + Convert.ToString(entity.Attributes["current_temperature"]);
+            textCurrentTemperature.Text = "Actual: " + entity.Attributes["current_temperature"] != null ? 
+                Convert.ToString(entity.Attributes["current_temperature"]) : string.Empty;
             textCurrentTemperature.TextWrapping = TextWrapping.Wrap;
             textCurrentTemperature.HorizontalAlignment = HorizontalAlignment.Center;
             textCurrentTemperature.VerticalAlignment = VerticalAlignment.Bottom;
@@ -48,8 +50,15 @@ namespace HashBoard
 
             if (entity.Attributes.ContainsKey("unit_of_measurement"))
             {
-                textTemperature.Text += entity.Attributes["unit_of_measurement"];
-                textCurrentTemperature.Text += entity.Attributes["unit_of_measurement"];
+                if (null != entity.Attributes["temperature"])
+                {
+                    textTemperature.Text += entity.Attributes["unit_of_measurement"];
+                }
+
+                if (null != entity.Attributes["unit_of_measurement"])
+                {
+                    textCurrentTemperature.Text += entity.Attributes["unit_of_measurement"];
+                }
             }
 
             grid.Background = ClimateControl.CreateLinearGradientBrush(entity);
