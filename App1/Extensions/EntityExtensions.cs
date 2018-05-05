@@ -12,41 +12,9 @@ namespace Hashboard
         /// Takes best effort guess to return an toggled state from current state.
         /// </summary>
         /// <returns></returns>
-        public static string GetToggledState(this Entity entity)
-        {
-            switch (entity.State)
-            {
-                case "true":
-                    return "false";
-                case "false":
-                    return "true";
-                case "on":
-                    return "off";
-                case "off":
-                    return "on";
-                case "playing":
-                    return "paused";
-                case "paused":
-                    return "playing";
-                case "idle":
-                    return "playing";
-                case "1":
-                    return "0";
-                case "0":
-                    return "1";
-
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        /// <summary>
-        /// Takes best effort guess to return an toggled state from current state.
-        /// </summary>
-        /// <returns></returns>
         public static bool IsInOffState(this Entity entity)
         {
-            switch (entity.State)
+            switch (entity.State.ToLower())
             {
                 case "false":
                 case "off":

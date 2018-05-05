@@ -15,8 +15,6 @@ namespace Hashboard
     {
         private Entity PanelEntity;
 
-        //private CancellationTokenSource cancellationTokenSource;
-
         public MediaControl(Entity entity)
         {
             this.InitializeComponent();
@@ -25,39 +23,18 @@ namespace Hashboard
 
             PanelEntity = entity;
 
-            if (PanelEntity.Attributes.ContainsKey("volume_level"))
-            {
-                Line scobblerLine = this.FindName("ScobblerLine") as Line;
-                Line scobblerProgress1 = this.FindName("ScobblerProgress1") as Line;
-                Line scobblerProgress2 = this.FindName("ScobblerProgress2") as Line;
+            UpdateUI();
+        }
 
-                double percentagePrevious = Convert.ToInt16(10 * scobblerProgress1.X2 / scobblerLine.X2) / 10.0;
-
-                scobblerProgress1.X2 = scobblerLine.X2 * Convert.ToDouble(PanelEntity.Attributes["volume_level"]);
-                scobblerProgress2.X1 = scobblerProgress1.X2 - scobblerProgress2.StrokeThickness;
-            }
+        /// <summary>
+        /// Respond to entity changes while the popup control is up.
+        /// </summary>
+        /// <param name="entity"></param>
+        public void EntityUpdated(Entity entity, IEnumerable<Entity> childrenEntities)
+        {
+            PanelEntity = entity;
 
             UpdateUI();
-
-            //cancellationTokenSource = new CancellationTokenSource();
-
-            //ThreadPoolTimer timer = ThreadPoolTimer.CreatePeriodicTimer(async (t) =>
-            //{
-            //    Debug.WriteLine($"{nameof(MediaControl)} is polling for state changes:  {DateTime.Now.ToLongTimeString()}.");
-
-            //    PanelEntity = await WebRequests.GetData<Entity>($"api/states/{PanelEntity.EntityId}");
-
-            //    await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-            //    {
-            //        UpdateUI();
-
-            //        if (this.Visibility == Visibility.Collapsed)
-            //        {
-            //            t.Cancel();
-            //        }
-            //    });
-
-            //}, TimeSpan.FromSeconds(1));
         }
 
         private void UpdateUI()
@@ -65,10 +42,11 @@ namespace Hashboard
             TextBlock textDeviceText = FindName("DeviceText") as TextBlock;
             TextBlock textArtistText = FindName("ArtistText") as TextBlock;
             TextBlock textTrackText = FindName("TrackText") as TextBlock;
+            BitmapIcon bitmapIcon = FindName("ButtonPlay") as BitmapIcon;
 
             if (PanelEntity.Attributes.ContainsKey("friendly_name"))
             {
-                textDeviceText.Text = PanelEntity.Attributes["friendly_name"];
+                textDeviceText.Text = PanelEntity.Attributes["friendly_name"].ToUpper();
             }
             else
             {
@@ -77,7 +55,7 @@ namespace Hashboard
 
             if (PanelEntity.Attributes.ContainsKey("media_artist"))
             {
-                textArtistText.Text = PanelEntity.Attributes["media_artist"];
+                textArtistText.Text = PanelEntity.Attributes["media_artist"].ToUpper();
             }
             else
             {
@@ -87,7 +65,7 @@ namespace Hashboard
             // Spotify only has "media_title"
             if (PanelEntity.Attributes.ContainsKey("media_title"))
             {
-                textTrackText.Text = PanelEntity.Attributes["media_title"];
+                textTrackText.Text = PanelEntity.Attributes["media_title"].ToUpper();
             }
             else
             {
@@ -97,7 +75,7 @@ namespace Hashboard
             // Bose has "media_track" and "media_title" but we just want the track name so do this after "media_title"
             if (PanelEntity.Attributes.ContainsKey("media_track"))
             {
-                textTrackText.Text = PanelEntity.Attributes["media_track"];
+                textTrackText.Text = PanelEntity.Attributes["media_track"].ToUpper();
             }
 
             if (PanelEntity.Attributes.ContainsKey("entity_picture"))
@@ -111,25 +89,63 @@ namespace Hashboard
                 }
             }
 
+            // Set the volume sliders
+            if (PanelEntity.Attributes.ContainsKey("volume_level"))
+            {
+                Line scobblerLine = this.FindName("ScobblerLine") as Line;
+                Line scobblerProgress1 = this.FindName("ScobblerProgress1") as Line;
+                Line scobblerProgress2 = this.FindName("ScobblerProgress2") as Line;
+
+                double percentagePrevious = Convert.ToInt16(10 * scobblerProgress1.X2 / scobblerLine.X2) / 10.0;
+
+                scobblerProgress1.X2 = scobblerLine.X2 * Convert.ToDouble(PanelEntity.Attributes["volume_level"]);
+                scobblerProgress2.X1 = scobblerProgress1.X2 - scobblerProgress2.StrokeThickness;
+            }
+
+            // Play / Pause / Power button to render icon and dictate toggle-action given current state
             if (string.Equals(PanelEntity.State, "playing", StringComparison.InvariantCultureIgnoreCase))
             {
-                BitmapIcon bitmapIcon = FindName("ButtonPlay") as BitmapIcon;
+                bitmapIcon.Tag = "media_play_pause";
+                bitmapIcon.UriSource = new Uri($"ms-appx:///Assets/media-pause.png");
+            }
+            else if (string.Equals(PanelEntity.State, "paused", StringComparison.InvariantCultureIgnoreCase))
+            {
+                bitmapIcon.UriSource = new Uri($"ms-appx:///Assets/media-play.png");
+                bitmapIcon.Tag = "media_play_pause";
+            }
+            else
+            {
+                bitmapIcon.UriSource = new Uri($"ms-appx:///Assets/power.png");
+                bitmapIcon.Tag = "toggle";
+            }
 
-                if (!string.Equals(bitmapIcon.Tag?.ToString(), "media_pause", StringComparison.InvariantCultureIgnoreCase))
+            // Source Select
+            if (PanelEntity.Attributes.ContainsKey("source_list"))
+            {
+                ComboBox comboBox = this.FindName("SourceComboBox") as ComboBox;
+
+                // Ensure clean-slate to handle reentry from due to entity update while the control is open
+                comboBox.SelectionChanged -= SourceComboBox_SelectionChanged;
+                comboBox.Items.Clear();
+
+                foreach (string item in PanelEntity.Attributes["source_list"])
                 {
-                    bitmapIcon.UriSource = new Uri($"ms-appx:///Assets/media-pause.png");
-                    bitmapIcon.Tag = "media_pause";
+                    comboBox.Items.Add(item);
+                }
+
+                if (PanelEntity.Attributes.ContainsKey("source"))
+                {
+                    comboBox.SelectedItem = Convert.ToString(PanelEntity.Attributes["source"]);
+                    comboBox.SelectionChanged += SourceComboBox_SelectionChanged;
                 }
             }
             else
             {
-                BitmapIcon bitmapIcon = FindName("ButtonPlay") as BitmapIcon;
+                // No need to show source-select if there's nothing to show
+                this.Height = 530;
 
-                if (!string.Equals(bitmapIcon.Tag?.ToString(), "media_play", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    bitmapIcon.UriSource = new Uri($"ms-appx:///Assets/media-play.png");
-                    bitmapIcon.Tag = "media_play";
-                }
+                ComboBox comboBox = this.FindName("SourceComboBox") as ComboBox;
+                comboBox.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -148,6 +164,9 @@ namespace Hashboard
                     ChangeScrobblerVolume(ScrobblerVolume.Up);
                     break;
 
+                // power (toggle)
+                // play (media_play_pause)
+                // pause (media_play_pause)
                 default:
                     WebRequests.SendAction(PanelEntity.EntityId, bitmapIcon.Tag.ToString());
                     break;
@@ -231,7 +250,7 @@ namespace Hashboard
                 Line scobblerProgress2 = this.FindName("ScobblerProgress2") as Line;
 
                 scobblerProgress1.X2 = (scobblerLine.X2 - scobblerProgress1.StrokeThickness) * percentageNew + scobblerProgress1.StrokeThickness;
-                //scobblerProgress2.X1 = scobblerProgress1.X2 - scobblerProgress2.StrokeThickness;
+                scobblerProgress2.X1 = scobblerProgress1.X2 - scobblerProgress2.StrokeThickness;
 
                 Dictionary<string, string> serviceData = new Dictionary<string, string>()
                 {
@@ -241,6 +260,19 @@ namespace Hashboard
 
                 WebRequests.SendAction(PanelEntity.EntityId.Split('.')[0], "volume_set", serviceData);
             }
+        }
+
+        private void SourceComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ComboBox comboBox = sender as ComboBox;
+
+            Dictionary<string, string> serviceData = new Dictionary<string, string>()
+            {
+                { "entity_id", PanelEntity.EntityId },
+                { "source", comboBox.SelectedItem.ToString() }
+            };
+
+            WebRequests.SendAction(PanelEntity.EntityId.Split('.')[0], "select_source", serviceData);
         }
     }
 }

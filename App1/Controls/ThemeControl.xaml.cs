@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.UI.Xaml;
@@ -12,7 +13,7 @@ namespace Hashboard
 {
     public partial class ThemeControl : UserControl
     {
-        public delegate void OnBackgroundBrushChanged();
+        public delegate Task OnBackgroundBrushChanged();
         private OnBackgroundBrushChanged BackgroundBrushChangedCallback;
 
         private static ApplicationDataContainer localSettings = ApplicationData.Current.LocalSettings;
@@ -309,7 +310,7 @@ namespace Hashboard
                 }
 
                 // Inform caller the background brush has changed
-                BackgroundBrushChangedCallback();
+                await BackgroundBrushChangedCallback();
             }
         }
     }

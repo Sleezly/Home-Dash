@@ -9,41 +9,41 @@
 
     <StackPanel x:Name="RootPanel" Orientation="Vertical" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="4">
         <Grid Padding="4">
-            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center">Home Assistant Connection Settings</TextBlock>
+            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold">HOME ASSISTANT CONNECTION SETTINGS</TextBlock>
         </Grid>
         <Grid Padding="4">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">Hostname:</TextBlock>
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">HOSTNAME</TextBlock>
             <TextBox x:Name="HomeAssistantHostnameText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="192.168.1.2"></TextBox>
         </Grid>
         <Grid Padding="4">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">Port:</TextBlock>
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">PORT</TextBlock>
             <TextBox x:Name="HomeAssistantPortText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="8123"></TextBox>
         </Grid>
         <Grid Padding="4">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">Password:</TextBlock>
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">PASSWORD</TextBlock>
             <PasswordBox x:Name="HomeAssistantPasswordText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Password="yavin333"></PasswordBox>
         </Grid>
         <Grid Padding="4">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">Polling Interval (seconds):</TextBlock>
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">POLLING INTERVAL (seconds)</TextBlock>
             <TextBox x:Name="PollingIntervalText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="30"></TextBox>
         </Grid>
         <Grid Padding="4">
-            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center">Home Assistant StateStream via MQTT Subscription</TextBlock>
+            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold">HOME ASSISTANT STATESTREAM via MQTT SUBSCRIPTION</TextBlock>
         </Grid>
         <Grid Padding="4">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">Broker Hostname:</TextBlock>
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">BROKER HOSTNAME</TextBlock>
             <TextBox x:Name="MqttBrokerHostnameText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="192.168.1.2"></TextBox>
         </Grid>
         <Grid Padding="4">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">Broker Username:</TextBlock>
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">BROKER USERNAME</TextBlock>
             <TextBox x:Name="MqttUsernameText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="homeassistant"></TextBox>
         </Grid>
         <Grid Padding="4">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">Broker Password:</TextBlock>
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">BROKER PASSWORD</TextBlock>
             <PasswordBox x:Name="MqttPasswordText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Password="yavin333"></PasswordBox>
         </Grid>
         <Grid Padding="4">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">State Stream Topic:</TextBlock>
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">STATE STREAM TOPIC</TextBlock>
             <TextBox Name="MqttStateStreamText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="homeassistant/#"></TextBox>
         </Grid>
         <Grid Padding="24">

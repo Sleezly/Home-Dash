@@ -31,10 +31,6 @@ namespace HashBoard
             {
                 grid.Background = Imaging.LoadAppXImageBrush(entity.Attributes["local_assets_picture"]);
             }
-            else
-            {
-                grid.Background = ThemeControl.AccentColorBrush;
-            }
 
             grid.Children.Add(textBlock);
 

@@ -12,15 +12,11 @@ namespace HashBoard
     {
         protected override Panel CreateSinglePanel(Entity entity, int width, int height)
         {
-            SolidColorBrush backgroundBrush;
+            SolidColorBrush backgroundBrush = null;
 
             if (entity.State == "on")
             {
                 backgroundBrush = entity.GetColor().CreateSolidColorBrush();
-            }
-            else
-            {
-                backgroundBrush = new SolidColorBrush(NoninteractiveBrushColor);
             }
 
             return CreatePanel(entity, width, height, backgroundBrush);
@@ -38,14 +34,10 @@ namespace HashBoard
                 }
             }
 
-            SolidColorBrush backgroundBrush;
+            SolidColorBrush backgroundBrush = null;
             if (rgbList.Count > 0)
             {
                 backgroundBrush = RGB.Average(rgbList).CreateSolidColorBrush();
-            }
-            else
-            {
-                backgroundBrush = new SolidColorBrush(NoninteractiveBrushColor);
             }
 
             return CreatePanel(entity, width, height, backgroundBrush);

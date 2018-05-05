@@ -32,9 +32,9 @@ namespace HashBoard
 
         public EntitySize Size { get; set; } = EntitySize.Normal;
 
-        public string TapEventAction { get; set; } = null;
+        public PanelTouchHandler TapHandler { get; set; }
 
-        public string HoldEventAction { get; set; } = null;
+        public PanelTouchHandler TapAndHoldHandler { get; set; }
 
         public TappedEventHandler TapEventHandler { private get; set; } = null;
 
@@ -49,7 +49,7 @@ namespace HashBoard
         protected abstract Panel CreateSinglePanel(Entity entity, int width, int height);
 
         protected abstract Panel CreateGroupPanel(Entity entity, IEnumerable<Entity> childrenEntities, int width, int height);
-
+        
         public Panel CreatePanel(Entity entity)
         {
             Panel panel = CreateSinglePanel(entity, Width(PanelSize), PanelSize);
@@ -95,15 +95,14 @@ namespace HashBoard
                 else
                 {
                     panel.Background = ThemeControl.AccentColorBrush;
-
-                    if (entity.IsInOffState())
-                    {
-                        panel.Background.Opacity = StateIsOffOpacity;
-                    }
                 }
             }
 
-            if (panel.Background.Opacity == 1.0)
+            if (entity.IsInOffState())
+            {
+                panel.Background.Opacity = StateIsOffOpacity;
+            }
+            else
             {
                 panel.Background.Opacity = DefaultOpacity;
             }
@@ -112,8 +111,8 @@ namespace HashBoard
             {
                 Entity = entity,
                 ChildrenEntities = childrenEntities,
-                ActionToInvokeOnTap = TapEventAction,
-                ActionToInvokeOnHold = HoldEventAction,
+                TapHandler = this.TapHandler,
+                TapAndHoldHandler = this.TapAndHoldHandler,
             };
         }
 

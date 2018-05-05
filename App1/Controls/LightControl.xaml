@@ -7,7 +7,7 @@
     Height="532">
 
     <StackPanel x:Name="RootPanel" Orientation="Vertical" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="4">
-        <TextBlock x:Name="DeviceText" HorizontalAlignment="Center" Text="DeviceText" FontSize="24"/>
+        <TextBlock x:Name="DeviceText" HorizontalAlignment="Center" Text="DEVICE" FontSize="22" FontWeight="Bold"/>
         <Grid PointerPressed="ColorWheelGrid_PointerPressed" PointerReleased="ColorWheelGrid_PointerReleased" PointerExited="ColorWheelGrid_PointerExited">
             <Grid x:Name="ColorWheel" Margin="0,12,0,12" Width="280" Height="280"/>
             <Ellipse x:Name="ColorWheelCircle" Width="24" Height="24" Stroke="{ThemeResource DefaultTextForegroundThemeBrush}" Fill="Transparent" StrokeThickness="2" HorizontalAlignment="Left" VerticalAlignment="Top"/>
@@ -24,7 +24,7 @@
                 </Rectangle.Fill>
             </Rectangle>
             <Ellipse x:Name="ColorTemperatureCircle" Width="24" Height="24" Stroke="{ThemeResource DefaultTextForegroundThemeBrush}" StrokeThickness="2" HorizontalAlignment="Left" PointerPressed="ColorTemperatureCircle_PointerPressed" PointerMoved="ColorTemperatureCircle_PointerMoved"/>
-            <TextBlock HorizontalAlignment="Left" Margin="30,40,0,0">Color Temperature</TextBlock>
+            <TextBlock HorizontalAlignment="Left" Margin="30,40,0,0">COLOR TEMPERATURE</TextBlock>
         </Grid>
         <Grid x:Name="BrightnessRoot" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Width="300" Height="60" Tapped="Brightness_Tapped" PointerPressed="Brightness_PointerPressed" PointerReleased="Brightness_PointerReleased" >
             <Rectangle x:Name="BrightnessRectangle" HorizontalAlignment="Center" Width="240" Height="12" Stroke="{ThemeResource DefaultTextForegroundThemeBrush}">
@@ -38,7 +38,7 @@
                 </Rectangle.Fill>
             </Rectangle>
             <Ellipse x:Name="BrightnessCircle" Width="24" Height="24" Stroke="{ThemeResource DefaultTextForegroundThemeBrush}" StrokeThickness="2" HorizontalAlignment="Left" PointerPressed="BrightnessCircle_PointerPressed"  PointerMoved="BrightnessCircle_PointerMoved"/>
-            <TextBlock HorizontalAlignment="Left" Margin="30,40,0,0">Brightness</TextBlock>
+            <TextBlock HorizontalAlignment="Left" Margin="30,40,0,0">BRIGHTNESS</TextBlock>
         </Grid>
         <BitmapIcon x:Name="ButtonPower" HorizontalAlignment="Center" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" UriSource="ms-appx:///Assets/power.png" Width="56" Height="56" Tapped="PowerButton_Tapped" PointerPressed="PowerButton_PointerPressed" PointerExited="PowerButton_PointerExited" />
     </StackPanel>

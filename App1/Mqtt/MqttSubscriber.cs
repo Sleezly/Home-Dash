@@ -104,7 +104,8 @@ namespace HashBoard
         private void OnMessageReceviedWorker(object sender, MqttMsgPublishEventArgs e)
         {
             //string message = Encoding.UTF8.GetString(e.Message);
-            //string entityId = $"{e.Topic.Split('/')[1]}.{e.Topic.Split('/')[2]}";
+            string entityId = $"{e.Topic.Split('/')[1]}.{e.Topic.Split('/')[2]}";
+            System.Diagnostics.Debug.WriteLine($"MQTT: {entityId}");
 
             EntityUpdatedCallback();
         }

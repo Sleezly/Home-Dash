@@ -22,8 +22,17 @@ namespace Hashboard
             ClimateEntity = entity;
 
             InitializeUI();
+        }
 
-            SetEllipse();
+        /// <summary>
+        /// Respond to entity changes while the popup control is up.
+        /// </summary>
+        /// <param name="entity"></param>
+        public void EntityUpdated(Entity entity, IEnumerable<Entity> childrenEntities)
+        {
+            ClimateEntity = entity;
+
+            InitializeUI();
         }
 
         public static LinearGradientBrush CreateLinearGradientBrush(Entity entity)
@@ -65,30 +74,38 @@ namespace Hashboard
             TextBlock currentTemperature = this.FindName("CurrentTemperature") as TextBlock;
             TextBlock targetTemperature = this.FindName("TargetTemperature") as TextBlock;
 
-            deviceName.Text = ClimateEntity.Attributes["friendly_name"];
-            currentTemperature.Text = $"Actual: {ClimateEntity.Attributes["current_temperature"]}{ClimateEntity.Attributes["unit_of_measurement"]}";
+            deviceName.Text = ClimateEntity.Attributes["friendly_name"].ToUpper();
+            currentTemperature.Text = $"ACTUAL: {ClimateEntity.Attributes["current_temperature"]}{ClimateEntity.Attributes["unit_of_measurement"]}";
             targetTemperature.Text = $"{ClimateEntity.Attributes["temperature"]}{ClimateEntity.Attributes["unit_of_measurement"]}";
 
+            // Operation drop-down
             ComboBox comboOperation = this.FindName("ComboOperation") as ComboBox;
-            ComboBox comboFanMode = this.FindName("ComboFanMode") as ComboBox;
+            comboOperation.SelectionChanged -= ComboOperation_SelectionChanged;
+            comboOperation.Items.Clear();
 
             foreach (string item in ClimateEntity.Attributes["operation_list"])
             {
                 comboOperation.Items.Add(item);
             }
 
-            comboOperation.SelectionChanged -= ComboOperation_SelectionChanged;
             comboOperation.SelectedItem = ClimateEntity.Attributes["operation_mode"] as string;
             comboOperation.SelectionChanged += ComboOperation_SelectionChanged;
+
+            // Fan Mode drop-down
+            ComboBox comboFanMode = this.FindName("ComboFanMode") as ComboBox;            
+            comboFanMode.SelectionChanged -= ComboFanMode_SelectionChanged;
+            comboFanMode.Items.Clear();
 
             foreach (string item in ClimateEntity.Attributes["fan_list"])
             {
                 comboFanMode.Items.Add(item);
             }
 
-            comboFanMode.SelectionChanged -= ComboFanMode_SelectionChanged;
             comboFanMode.SelectedItem = ClimateEntity.Attributes["fan_mode"] as string;
             comboFanMode.SelectionChanged += ComboFanMode_SelectionChanged;
+
+            // Colorful circle
+            SetEllipse();
         }
 
         private void SetEllipse()

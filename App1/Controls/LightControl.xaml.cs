@@ -43,6 +43,18 @@ namespace Hashboard
         }
 
         /// <summary>
+        /// Respond to entity changes while the popup control is up.
+        /// </summary>
+        /// <param name="entity"></param>
+        public void EntityUpdated(Entity entity, IEnumerable<Entity> childrenEntities)
+        {
+            PanelEntity = entity;
+            ChildrenEntities = childrenEntities;
+
+            InitializeUI();
+        }
+
+        /// <summary>
         /// Renders a beautiful color wheel with touch-enabled events from each gradient-blended line.
         /// </summary>
         private void DrawColorWheel()
@@ -88,7 +100,7 @@ namespace Hashboard
             if (PanelEntity.Attributes.ContainsKey("friendly_name"))
             {
                 TextBlock textBlock = FindName("DeviceText") as TextBlock;
-                textBlock.Text = PanelEntity.Attributes["friendly_name"];
+                textBlock.Text = PanelEntity.Attributes["friendly_name"].ToUpper();
             }
 
             // For the group panel, average the color of children entities together
@@ -274,10 +286,6 @@ namespace Hashboard
 
             // Send the RGB update via REST API
             SendColorUpdate(CurrentColor);
-
-            // Update the power button color as well
-            PanelEntity.State = "on";
-            ShowHightlightColor(ButtonState.NotPressed);
         }
 
         /// <summary>
@@ -380,10 +388,6 @@ namespace Hashboard
             ellipse.Fill = RGB.GetBlendedColor(percentage, Colors.DarkSlateGray, Colors.LightGray).CreateSolidColorBrush();
             ellipse.Margin = new Thickness(
                 (1.0 - percentage) * rectangle.Width + offset, 0, 0, 0);
-
-            // Update the power button color as well
-            PanelEntity.State = "on";
-            ShowHightlightColor(ButtonState.NotPressed);
         }
 
         /// <summary>
@@ -409,10 +413,6 @@ namespace Hashboard
             ellipse.Fill = CurrentColor.CreateSolidColorBrush();
             ellipse.Margin = new Thickness(
                 (1.0 - percentage) * rectangle.Width + offset, 0, 0, 0);
-
-            // Update the power button color as well
-            PanelEntity.State = "on";
-            ShowHightlightColor(ButtonState.NotPressed);
         }
 
         /// <summary>
@@ -430,10 +430,6 @@ namespace Hashboard
             {
                 WebRequests.SendAction(PanelEntity.EntityId, "toggle");
             }
-
-            PanelEntity.State = PanelEntity.GetToggledState();
-
-            ShowHightlightColor(ButtonState.NotPressed);
         }
 
         /// <summary>

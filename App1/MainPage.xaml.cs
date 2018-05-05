@@ -20,6 +20,7 @@ using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
+using static Hashboard.PanelTouchHandler;
 using static HashBoard.PanelBuilderBase;
 
 namespace HashBoard
@@ -83,6 +84,15 @@ namespace HashBoard
             nameof(SettingsControl),
             nameof(ThemeControl),
         };
+
+        /// <summary>
+        /// Callback for Popup controls to be notified when the entity being edited has been modified.
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <param name="childrenEntities"></param>
+        private delegate void EntityUpdatedCallback(Entity entity, IEnumerable<Entity> childrenEntities);
+        private EntityUpdatedCallback NotifyPopupEntityUpdate = null;
+        private Entity PopupEntity = null;
 
         /// <summary>
         /// Constructor
@@ -212,81 +222,69 @@ namespace HashBoard
                 new ClimatePanelBuilder() {
                     EntityIdStartsWith = "climate.",
                     FontSize = 32,
-                    HoldEventAction = nameof(ClimateControl),
-                    TapEventAction = nameof(ClimateControl),
-                    //ValueTextFromAttributeOverride = "current_temperature",
-                    TapEventHandler = PanelElement_Tapped,
-                    HoldEventHandler = PanelElement_Holding,
-                    PressedEventHandler = PanelElement_PointerPressed,
-                    ReleasedEventHandler = PanelElement_PointerExited},
+                    TapHandler = new PanelTouchHandler(nameof(ClimateControl), ResponseExpected.None),
+                    TapAndHoldHandler = new PanelTouchHandler(nameof(ClimateControl), ResponseExpected.None) },
 
                 // Media Player Platform
                 new MediaPlayerPanelBuilder() {
                     EntityIdStartsWith = "media_player.",
-                    TapEventAction = "media_play_pause",
                     Size = EntitySize.Normal,
-                    HoldEventAction = nameof(MediaControl),
-                    TapEventHandler = PanelElement_Tapped,
-                    HoldEventHandler = PanelElement_Holding,
-                    PressedEventHandler = PanelElement_PointerPressed,
-                    ReleasedEventHandler = PanelElement_PointerExited},
+                    TapHandler = new PanelTouchHandler("media_play_pause", ResponseExpected.EntityUpdated),
+                    TapAndHoldHandler = new PanelTouchHandler(nameof(MediaControl), ResponseExpected.None) },
 
                 // Light Platform
                 new LightPanelBuilder() {
                     EntityIdStartsWith = "light.",
-                    TapEventAction = "toggle",
-                    HoldEventAction = nameof(LightControl),
-                    TapEventHandler = PanelElement_Tapped,
-                    HoldEventHandler = PanelElement_Holding,
-                    PressedEventHandler = PanelElement_PointerPressed,
-                    ReleasedEventHandler = PanelElement_PointerExited},
+                    TapHandler = new PanelTouchHandler("toggle", ResponseExpected.EntityUpdated),
+                    TapAndHoldHandler = new PanelTouchHandler(nameof(LightControl), ResponseExpected.None) },
 
                 // Script Platform
                 new NameOnlyPanelBuilder() {
                     EntityIdStartsWith = "script.",
-                    TapEventHandler = PanelElement_Tapped,
-                    //HoldEventHandler = PanelElement_Holding,
-                    PressedEventHandler = PanelElement_PointerPressed,
-                    ReleasedEventHandler = PanelElement_PointerExited},
+                    TapHandler = new PanelTouchHandler(null, ResponseExpected.None) },
 
                 // Switch Platform
                 new GenericPanelBuilder() {
                     EntityIdStartsWith = "switch.",
-                    TapEventAction = "toggle",
-                    TapEventHandler = PanelElement_Tapped,
-                    //HoldEventHandler = PanelElement_Holding,
-                    PressedEventHandler = PanelElement_PointerPressed,
-                    ReleasedEventHandler = PanelElement_PointerExited},
+                    TapHandler = new PanelTouchHandler("toggle", ResponseExpected.EntityUpdated) },
 
                 // Automation Platform
                 new GenericPanelBuilder() {
                     EntityIdStartsWith = "automation.",
-                    TapEventAction = "trigger",
-                    HoldEventAction = "toggle",
-                    TapEventHandler = PanelElement_Tapped,
-                    HoldEventHandler = PanelElement_Holding,
-                    PressedEventHandler = PanelElement_PointerPressed,
-                    ReleasedEventHandler = PanelElement_PointerExited},
+                    TapHandler = new PanelTouchHandler("trigger", ResponseExpected.None),
+                    TapAndHoldHandler = new PanelTouchHandler("toggle", ResponseExpected.EntityUpdated) },
                 
                 // Hasboard Settings Control Panel
                 new NameOnlyPanelBuilder() {
                     EntityIdStartsWith = $"{SettingsControlPanelName}.",
-                    TapEventAction = nameof(SettingsControl),
-                    TapEventHandler = PanelElement_Tapped,
-                    PressedEventHandler = PanelElement_PointerPressed,
-                    ReleasedEventHandler = PanelElement_PointerExited},
+                    TapHandler = new PanelTouchHandler(nameof(SettingsControl), ResponseExpected.None) },
 
                 // Hasboard Theme Control Panel
                 new NameOnlyPanelBuilder() {
                     EntityIdStartsWith = $"{ThemeControlMenuPanelName}.",
-                    TapEventAction = nameof(ThemeControl),
-                    TapEventHandler = PanelElement_Tapped,
-                    PressedEventHandler = PanelElement_PointerPressed,
-                    ReleasedEventHandler = PanelElement_PointerExited},
+                    TapHandler = new PanelTouchHandler(nameof(ThemeControl), ResponseExpected.None) },
 
                 // Everything else
                 new GenericPanelBuilder() { EntityIdStartsWith = string.Empty },
             };
+
+            // Where tap and tap+hold is requested, assign the touch events for proper touch routing
+            foreach (PanelBuilderBase customPanelBuilder in CustomEntities)
+            {
+                if (customPanelBuilder.TapHandler != null)
+                {
+                    customPanelBuilder.TapEventHandler = PanelElement_Tapped;
+                    customPanelBuilder.PressedEventHandler = PanelElement_PointerPressed;
+                    customPanelBuilder.ReleasedEventHandler = PanelElement_PointerExited;
+                }
+
+                if (customPanelBuilder.TapAndHoldHandler != null)
+                {
+                    customPanelBuilder.HoldEventHandler = PanelElement_Holding;
+                    customPanelBuilder.PressedEventHandler = PanelElement_PointerPressed;
+                    customPanelBuilder.ReleasedEventHandler = PanelElement_PointerExited;
+                }
+            }
         }
 
         /// <summary>
@@ -300,22 +298,25 @@ namespace HashBoard
             {
                 case nameof(LightControl):
                     popupContent = new LightControl(entity, childrenEntities);
+                    NotifyPopupEntityUpdate = (popupContent as LightControl).EntityUpdated;
                     break;
 
                 case nameof(MediaControl):
                     popupContent = new MediaControl(entity);
+                    NotifyPopupEntityUpdate = (popupContent as MediaControl).EntityUpdated;
+                    break;
+
+                case nameof(ClimateControl):
+                    popupContent = new ClimateControl(entity);
+                    NotifyPopupEntityUpdate = (popupContent as ClimateControl).EntityUpdated;
                     break;
 
                 case nameof(SettingsControl):
                     popupContent = new SettingsControl();
                     break;
 
-                case nameof(ClimateControl):
-                    popupContent = new ClimateControl(entity);
-                    break;
-
                 case nameof(ThemeControl):
-                    popupContent = new ThemeControl(UpdateMainFrameWithNewTheme);
+                    popupContent = new ThemeControl(LoadFrame);
                     break;
 
                 default:
@@ -324,6 +325,13 @@ namespace HashBoard
 
             if (popupContent != null)
             {
+                // When a entity-updated callback is requested, keep track of the entity
+                // which the pop-up control is monitoring.
+                if (null != NotifyPopupEntityUpdate)
+                {
+                    PopupEntity = entity;
+                }
+
                 Popup popup = new Popup()
                 {
                     IsLightDismissEnabled = true,
@@ -333,6 +341,9 @@ namespace HashBoard
 
                 popup.Closed += async (s, re) =>
                 {
+                    PopupEntity = null;
+                    NotifyPopupEntityUpdate = null; 
+
                     if (popup.Child is SettingsControl)
                     {
                         await LoadFrame();
@@ -358,19 +369,6 @@ namespace HashBoard
 
                 popup.IsOpen = true;
             }
-        }
-
-        /// <summary>
-        /// Callback which signals a theme change has been requested
-        /// </summary>
-        private async void UpdateMainFrameWithNewTheme()
-        {
-            // Set the theme (in case it changed)
-            //ScrollViewer scrollViewer = this.FindName("MainScrollView") as ScrollViewer;
-            //scrollViewer.Background = ThemeControl.BackgroundBrush;
-
-            // Completely reload the UI to bring in a new theme
-            await LoadFrame();
         }
 
         /// <summary>
@@ -451,30 +449,94 @@ namespace HashBoard
             }
         }
 
+        /// <summary>
+        /// Panel interaction handler. Sends a web request to home assistant or opens the popup control.
+        /// Changes visual state of the panel to match.
+        /// </summary>
+        /// <param name="panel"></param>
+        /// <param name="panelData"></param>
+        /// <param name="serviceToInvoke"></param>
+        /// <param name="responseExpected"></param>
+        private void HandleTouchEvent(Panel panel, PanelData panelData, string serviceToInvoke, ResponseExpected responseExpected)
+        {
+            if (string.IsNullOrEmpty(serviceToInvoke))
+            {
+                // This is a simple web request which has no associated JSON payload
+                SendPanelDataSimple(panel, panelData, responseExpected);
+            }
+            else
+            {
+                // Reroute tap actions to launch a custom control panel when the requested name matches a named Popup control
+                if (popupUserControlList.Any(x => string.Equals(x, serviceToInvoke, StringComparison.InvariantCultureIgnoreCase)))
+                {
+                    ShowPopupControl(serviceToInvoke, panelData.Entity, panelData.ChildrenEntities);
+
+                    MarkPanelAsDefaultState(panel);
+                }
+                else
+                {
+                    SendPanelDataWithJson(panel, panelData, serviceToInvoke, responseExpected);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tap and Hold on a Panel event.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void PanelElement_Holding(object sender, HoldingRoutedEventArgs e)
         {
             if (e == null || e.HoldingState == HoldingState.Completed)
             {
                 PanelData panelData = PanelData.GetPanelData(sender);
 
-                if (string.IsNullOrEmpty(panelData.ActionToInvokeOnHold))
+                HandleTouchEvent(sender as Panel, panelData, panelData.TapAndHoldHandler.Service, panelData.TapAndHoldHandler.Response);
+            }
+        }
+
+        /// <summary>
+        /// Tap on a Panel event.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void PanelElement_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            PanelData panelData = PanelData.GetPanelData(sender);
+
+            if (MousePressStartTime + TimeSpan.FromSeconds(3) > DateTime.Now &&
+                MousePressStartTime + TimeSpan.FromMilliseconds(300) < DateTime.Now)
+            {
+                if (null != panelData.TapAndHoldHandler)
                 {
-                    SendPanelDataSimple(sender as Panel, panelData);
+                    // Convert this tap to simulate tap+hold when a mouse is being used
+                    PanelElement_Holding(sender, null);
                 }
                 else
-                { 
-                    if (popupUserControlList.Any(x => string.Equals(x, panelData.ActionToInvokeOnHold, StringComparison.InvariantCultureIgnoreCase)))
-                    {
-                        ShowPopupControl(panelData.ActionToInvokeOnHold, panelData.Entity, panelData.ChildrenEntities);
-
-                        // Restore the panel to original visual state
-                        MarkPanelAsDefaultState(sender as Panel);
-                    }
-                    else
-                    {
-                        SendPanelDataWithJson((Panel)sender, panelData, panelData.ActionToInvokeOnHold);
-                    }
+                {
+                    MarkPanelAsDefaultState(sender as Panel);
                 }
+            }
+            else
+            {
+                HandleTouchEvent(sender as Panel, panelData, panelData.TapHandler.Service, panelData.TapHandler.Response);
+            }
+        }
+
+        /// <summary>
+        /// Returns panel opacity back to its current state.
+        /// </summary>
+        /// <param name="panel"></param>
+        /// <param name="responseExpected"></param>
+        private void MarkPanelStatePerExpectedResponse(Panel panel, ResponseExpected responseExpected)
+        {
+            if (responseExpected == ResponseExpected.EntityUpdated)
+            {
+                MarkPanelAsUpdateRequired(panel);
+            }
+            else
+            {
+                MarkPanelAsDefaultState(panel);
             }
         }
 
@@ -504,48 +566,14 @@ namespace HashBoard
             }
         }
 
-        private void PanelElement_Tapped(object sender, TappedRoutedEventArgs e)
-        {
-            PanelData panelData = PanelData.GetPanelData(sender);
-
-            if (MousePressStartTime + TimeSpan.FromSeconds(3) > DateTime.Now &&
-                MousePressStartTime + TimeSpan.FromMilliseconds(300) < DateTime.Now)
-            {
-                if (!string.IsNullOrEmpty(panelData.ActionToInvokeOnHold))
-                {
-                    // Simulate tap + hold when using the mouse
-                    PanelElement_Holding(sender, null);
-                }
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(panelData.ActionToInvokeOnTap))
-                {
-                    SendPanelDataSimple((Panel)sender, panelData);
-                }
-                else
-                {
-                    // Reroute tap actions to launch a custom control panel when the requested name matches a named Popup control
-                    if (popupUserControlList.Any(x => string.Equals(x, panelData.ActionToInvokeOnTap, StringComparison.InvariantCultureIgnoreCase)))
-                    {
-                        ShowPopupControl(panelData.ActionToInvokeOnTap, panelData.Entity, panelData.ChildrenEntities);
-                    }
-                    else
-                    {
-                        SendPanelDataWithJson((Panel)sender, panelData, panelData.ActionToInvokeOnTap);
-                    }
-                }
-            }
-        }
-
         /// <summary>
         /// Send data request to Home Assistant with no JSON body in the request.
         /// </summary>
         /// <param name="panel"></param>
         /// <param name="panelData"></param>
-        private void SendPanelDataSimple(Panel panel, PanelData panelData)
+        private void SendPanelDataSimple(Panel panel, PanelData panelData, ResponseExpected responseExpected)
         {
-            MarkPanelAsUpdateRequired(panel);
+            MarkPanelStatePerExpectedResponse(panel, responseExpected);
 
             if (panelData.ChildrenEntities != null)
             {
@@ -562,9 +590,9 @@ namespace HashBoard
         /// </summary>
         /// <param name="panel"></param>
         /// <param name="panelData"></param>
-        private void SendPanelDataWithJson(Panel panel, PanelData panelData, string serviceToInvoke)
+        private void SendPanelDataWithJson(Panel panel, PanelData panelData, string serviceToInvoke, ResponseExpected responseExpected)
         {
-            MarkPanelAsUpdateRequired(panel);
+            MarkPanelStatePerExpectedResponse(panel, responseExpected);
 
             if (panelData.ChildrenEntities != null)
             {
@@ -575,7 +603,7 @@ namespace HashBoard
 
                 for (int i = indexOfGroupPanel + 1; i < indexOfGroupPanel + 1 + panelData.ChildrenEntities.Count(); i++)
                 {
-                    MarkPanelAsUpdateRequired(parentPanel.Children[i] as Panel);
+                    MarkPanelStatePerExpectedResponse(panel, responseExpected);
                 }
             }
             else
@@ -620,6 +648,17 @@ namespace HashBoard
         }
 
         /// <summary>
+        /// Gets the list of Entity IDs within the given entity's Attribute field. This simplifies the JArray type conversion
+        /// as well as string parsing which contains superflous quotes and whitespace which need to be thrown out.
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        private IEnumerable<string> ParseEntityIdAttribute(Entity entity)
+        {
+            return (entity.Attributes["entity_id"] as Newtonsoft.Json.Linq.JArray).ToString().Split("\"").Where(x => x.Contains("."));
+        }
+
+        /// <summary>
         /// Update the given entities on the UI thread.
         /// </summary>
         /// <param name="entitiesToUpdate"></param>
@@ -628,7 +667,29 @@ namespace HashBoard
         {
             await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
+                // Update the main frame
                 UpdateChildPanelIfneeded((FrameworkElement)this.Content, allEntities, entitiesToUpdate);
+
+                // Update the popup control when open and the popup entity currently selected is one of the updated entities
+                if (null != NotifyPopupEntityUpdate && 
+                    entitiesToUpdate.Any(x => string.Equals(PopupEntity.EntityId, x.EntityId, StringComparison.InvariantCultureIgnoreCase)))
+                {
+                    PopupEntity = entitiesToUpdate.Where(x => string.Equals(PopupEntity.EntityId, x.EntityId, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+
+                    // Get the children entities, if any
+                    IEnumerable<Entity> childrenEntities = null;
+                    if (PopupEntity.Attributes.ContainsKey("entity_id"))
+                    {
+                        childrenEntities = allEntities.Where(x => ParseEntityIdAttribute(PopupEntity).Any(childId => childId == x.EntityId));
+                    }
+
+                    if (PopupEntity.Attributes.ContainsKey("entity_picture"))
+                    {
+                        Debug.WriteLine($"{PopupEntity.Attributes["entity_picture"]}");
+                    }
+
+                    NotifyPopupEntityUpdate(PopupEntity, childrenEntities);
+                }
             });
         }
 
@@ -682,16 +743,16 @@ namespace HashBoard
                     IEnumerable<Entity> allEntities = await WebRequests.GetData<IEnumerable<Entity>>($"api/states");
 
                     // Get all entities which have been updated since the last time we've checked
-                    IEnumerable<Entity> entitiesToUpdate = allEntities.Where(x => x.LastChanged > lastUpdatedTime).ToList();
+                    IEnumerable<Entity> entitiesToUpdate = allEntities.Where(x => x.LastUpdated > lastUpdatedTime).ToList();
 
                     if (entitiesToUpdate.Any())
                     {
                         // For all entities which need to be updated, get all group entities and check their children to see if the group entity needs to be updated as well
-                        lastUpdatedTime = entitiesToUpdate.Select(x => x.LastChanged).OrderByDescending(x => x).First();
+                        lastUpdatedTime = entitiesToUpdate.Select(x => x.LastUpdated).OrderByDescending(x => x).First();
 
                         foreach (Entity group in allEntities.Where(x => x.Attributes.ContainsKey("entity_id")))
                         {
-                            IEnumerable<string> childrenEntityIds = (group.Attributes["entity_id"] as Newtonsoft.Json.Linq.JArray).ToString().Split("\"").Where(x => x.Contains("."));
+                            IEnumerable<string> childrenEntityIds = ParseEntityIdAttribute(group);
 
                             if (childrenEntityIds.Any(x => entitiesToUpdate.Any(y => y.EntityId.Equals(x, StringComparison.InvariantCultureIgnoreCase))))
                             {
@@ -883,6 +944,23 @@ namespace HashBoard
             return CreateEntitiesInView(view, childrenEntities);
         }
 
+        private Grid CreateHeaderTextBlock(Entity entity)
+        {
+            Grid grid = new Grid();
+            grid.Background = new SolidColorBrush(Colors.Black);
+            grid.Background.Opacity = 0.4;
+            grid.Padding = new Thickness(6);
+
+            TextBlock textBlock = new TextBlock();
+            textBlock.Text = Convert.ToString(entity.Attributes["friendly_name"]).ToUpper();
+            textBlock.FontSize = 18;
+            textBlock.FontWeight = FontWeights.Bold;
+
+            grid.Children.Add(textBlock);
+
+            return grid;
+        }
+
         /// <summary>
         /// Creates the main default view.
         /// </summary>
@@ -900,22 +978,10 @@ namespace HashBoard
             // Add all single and group entities which are tied to each view
             foreach (Entity entityHeader in entityHeaders)
             {
-                Grid grid = new Grid();
-                grid.Background = new SolidColorBrush(Colors.Black);
-                grid.Background.Opacity = 0.4;
-                grid.Padding = new Thickness(6);
-
-                TextBlock textBlock = new TextBlock();
-                textBlock.Text = Convert.ToString(entityHeader.Attributes["friendly_name"]);
-                textBlock.FontSize = 18;
-                textBlock.FontWeight = FontWeights.Bold;
-
-                grid.Children.Add(textBlock);
-
-                stackPanel.Children.Add(grid);
+                stackPanel.Children.Add(CreateHeaderTextBlock(entityHeader));
                 stackPanel.Children.Add(CreateEntitiesInView(entityHeader, allEntities));
             }
-
+            
             // Add a Settings panel
             Entity settingsEntity = CreateCustomStaticPanel(SettingsControlPanelName, "panel-settings.png");
             Entity themeEntity = CreateCustomStaticPanel(ThemeControlMenuPanelName, "panel-paintbrush.png");

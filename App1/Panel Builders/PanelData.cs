@@ -1,13 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using Hashboard;
+using System.Collections.Generic;
 using Windows.UI.Xaml;
 
 namespace HashBoard
 {
     public class PanelData
     {
-        public string ActionToInvokeOnTap { get; set; }
+        public PanelTouchHandler TapHandler { get; set; }
 
-        public string ActionToInvokeOnHold { get; set; }
+        public PanelTouchHandler TapAndHoldHandler { get; set; }
 
         public Entity Entity { get; set; }
 

@@ -104,7 +104,7 @@ namespace HashBoard
             }
             else
             {
-                throw new ArgumentOutOfRangeException($"Unknown DarkSky Sensor State Value '{darkSkySensorState}'");
+                weatherImageAsset = "weather_na.png";
             }
 
             return Imaging.LoadImage(weatherImageAsset);

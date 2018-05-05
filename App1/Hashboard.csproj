@@ -95,6 +95,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\BaseControl.cs" />
     <Compile Include="Controls\ClimateControl.xaml.cs">
       <DependentUpon>ClimateControl.xaml</DependentUpon>
     </Compile>
@@ -115,6 +116,7 @@
     <Compile Include="Panel Builders\DateTimePanelBuilder.cs" />
     <Compile Include="Panel Builders\ClimatePanelBuilder.cs" />
     <Compile Include="Panel Builders\MediaPlayerPanelBuilder.cs" />
+    <Compile Include="Panel Builders\PanelTouchHandler.cs" />
     <Compile Include="Panel Builders\StatePanelBuilder.cs" />
     <Compile Include="Panel Builders\NameOnlyPanelBuilder.cs" />
     <Compile Include="Panel Builders\GenericPanelBuilder.cs" />
@@ -140,6 +142,9 @@
     <None Include="App1_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets\panel-paintbrush.png" />
+    <Content Include="Assets\panel-settings.png" />
+    <Content Include="Assets\weather_na.png" />
     <Content Include="Assets\arrow-down.png" />
     <Content Include="Assets\arrow-up.png" />
     <Content Include="Assets\background-blue.jpg" />
@@ -151,9 +156,7 @@
     <Content Include="Assets\media-skip-previous.png" />
     <Content Include="Assets\media-stop.png" />
     <Content Include="Assets\media-pause.png" />
-    <Content Include="Assets\panel-paintbrush.png" />
     <Content Include="Assets\power.png" />
-    <Content Include="Assets\panel-settings.png" />
     <Content Include="Assets\volume-high.png" />
     <Content Include="Assets\volume-low.png" />
     <Content Include="Assets\volume-medium.png" />

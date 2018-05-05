@@ -79,10 +79,10 @@ namespace HashBoard
         private static void SendData(string domain, string action, string data)
         {
             Task.Factory.StartNew(async () =>
-            { 
+            {
                 Uri uri = new Uri($"http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
 
-                Debug.WriteLine($"{nameof(SendData)} Uri:{uri} Json:{data}");
+                Debug.WriteLine($"{nameof(SendData)} Uri:http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}?{ApiPassword}=[xxxx] Json:{data}");
 
                 HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(uri);
 
