@@ -16,7 +16,7 @@ namespace HashBoard
 
         public static async Task<T> GetData<T>(string apiAction)
         {
-            Uri uri = new Uri($"http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/{apiAction}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
+            Uri uri = new Uri($"{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/{apiAction}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
 
             HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(uri);
             var response = (HttpWebResponse)await Task.Factory.FromAsync<WebResponse>(request.BeginGetResponse, request.EndGetResponse, null);
@@ -80,9 +80,9 @@ namespace HashBoard
         {
             Task.Factory.StartNew(async () =>
             {
-                Uri uri = new Uri($"http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
+                Uri uri = new Uri($"{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
 
-                Debug.WriteLine($"{nameof(SendData)} Uri:http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}?{ApiPassword}=[xxxx] Json:{data}");
+                Debug.WriteLine($"{nameof(SendData)} Uri:{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}?{ApiPassword}=[xxxx] Json:{data}");
 
                 HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(uri);
 
@@ -101,13 +101,13 @@ namespace HashBoard
 
                 var response = (HttpWebResponse)await Task.Factory.FromAsync<WebResponse>(request.BeginGetResponse, request.EndGetResponse, null);
 
-                Stream stream = response.GetResponseStream();
+                //Stream stream = response.GetResponseStream();
 
-                StreamReader strReader = new StreamReader(stream);
+                //StreamReader strReader = new StreamReader(stream);
 
-                string text = await strReader.ReadToEndAsync();
+                //string text = await strReader.ReadToEndAsync();
 
-                return;
+                //return;
             });
             //request.BeginGetResponse((x) =>
             //{

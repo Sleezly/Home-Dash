@@ -52,8 +52,8 @@ namespace Hashboard
 
         private static readonly Dictionary<string, string> AppXBackgroundImages = new Dictionary<string, string>()
         {
-            { BackgroundWavesBlue, "background-blue.jpg" },
-            { BackgroundWavesRed, "background-red.png" },
+            { BackgroundWavesBlue, "background//background-blue.jpg" },
+            { BackgroundWavesRed, "background//background-red.png" },
         };
 
         private readonly List<string> BackgroundChoices = new List<string>()

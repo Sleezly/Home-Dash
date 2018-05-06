@@ -16,6 +16,11 @@ namespace Hashboard
 
             this.RequestedTheme = ThemeControl.GetApplicationTheme();
 
+            if (null != HttpProtocol)
+            {
+                TextBox homeAssistantProtocol = this.FindName("HomeAssistantProtocolText") as TextBox;
+                homeAssistantProtocol.Text = HttpProtocol;
+            }
             if (null != HomeAssistantHostname)
             {
                 TextBox homeAssistantHostname = this.FindName("HomeAssistantHostnameText") as TextBox;
@@ -35,6 +40,11 @@ namespace Hashboard
             {
                 TextBox homeAssistantPollingInterval = this.FindName("PollingIntervalText") as TextBox;
                 homeAssistantPollingInterval.Text = HomeAssistantPollingInterval.TotalSeconds.ToString();
+
+                if (HomeAssistantPollingInterval == default(TimeSpan))
+                {
+                    homeAssistantPollingInterval.Text += " (zero for disabled)";
+                }
             }
             if (null != MqttBrokerHostname)
             {
@@ -60,6 +70,7 @@ namespace Hashboard
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
+            TextBox homeAssistantProtocol = this.FindName("HomeAssistantProtocolText") as TextBox;
             TextBox homeAssistantHostname = this.FindName("HomeAssistantHostnameText") as TextBox;
             TextBox homeAssistantPort = this.FindName("HomeAssistantPortText") as TextBox;
             PasswordBox homeAssistantPassword = this.FindName("HomeAssistantPasswordText") as PasswordBox;
@@ -69,6 +80,7 @@ namespace Hashboard
             PasswordBox mqttPassword = this.FindName("MqttPasswordText") as PasswordBox;
             TextBox mqttStateStream = this.FindName("MqttStateStreamText") as TextBox;
 
+            HttpProtocol = homeAssistantProtocol.Text;
             HomeAssistantHostname = homeAssistantHostname.Text;
             HomeAssistantPort = homeAssistantPort.Text;
             HomeAssistantPassword = homeAssistantPassword.Password;
@@ -84,6 +96,21 @@ namespace Hashboard
             else
             {
                 HomeAssistantPollingInterval = default(TimeSpan);                
+            }
+        }
+        
+        /// <summary>
+        /// Connection protocol for communicating with the home assistant server. This is either http or https.
+        /// </summary>
+        public static string HttpProtocol
+        {
+            get
+            {
+                return localSettings.Values["HomeAssistantProtocol"] as string;
+            }
+            private set
+            {
+                localSettings.Values["HomeAssistantProtocol"] = value;
             }
         }
 
@@ -139,9 +166,9 @@ namespace Hashboard
         {
             get
             {
-                if (Int32.TryParse(localSettings.Values["HomeAssistantPollingInterval"] as string, out int interval))
+                if (localSettings.Values.ContainsKey("HomeAssistantPollingInterval"))
                 {
-                    return TimeSpan.FromSeconds(interval);
+                    return TimeSpan.FromSeconds((double)localSettings.Values["HomeAssistantPollingInterval"]);
                 }
                 else
                 {
@@ -212,11 +239,6 @@ namespace Hashboard
             {
                 localSettings.Values["MqttStateStream"] = value;
             }
-        }
-
-        private async void Button_Click_1(object sender, RoutedEventArgs e)
-        {
-            await ApplicationData.Current.ClearAsync();
         }
     }
 }

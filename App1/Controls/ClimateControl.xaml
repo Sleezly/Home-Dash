@@ -20,9 +20,9 @@
                 </Ellipse.Fill>
             </Ellipse>
             <StackPanel VerticalAlignment="Center">
-                <BitmapIcon x:Name="ArrowUp" Width="64" UriSource="ms-appx:///Assets/arrow-up.png" Foreground="LightYellow" Tapped="BitmapIcon_Tapped" PointerPressed="BitmapIcon_PointerPressed" PointerReleased="BitmapIcon_PointerReleased" PointerMoved="BitmapIcon_PointerReleased"/>
+                <BitmapIcon x:Name="ArrowUp" Width="64" UriSource="ms-appx:///Assets/buttons/arrow-up.png" Foreground="LightYellow" Tapped="BitmapIcon_Tapped" PointerPressed="BitmapIcon_PointerPressed" PointerReleased="BitmapIcon_PointerReleased" PointerMoved="BitmapIcon_PointerReleased"/>
                 <TextBlock x:Name="TargetTemperature" HorizontalAlignment="Center" Text="72" Foreground="LightYellow" FontWeight="Bold" FontSize="48" />
-                <BitmapIcon x:Name="ArrowDown" Width="64" UriSource="ms-appx:///Assets/arrow-down.png" Foreground="LightYellow" Tapped="BitmapIcon_Tapped" PointerPressed="BitmapIcon_PointerPressed" PointerReleased="BitmapIcon_PointerReleased" PointerMoved="BitmapIcon_PointerReleased"/>
+                <BitmapIcon x:Name="ArrowDown" Width="64" UriSource="ms-appx:///Assets/buttons/arrow-down.png" Foreground="LightYellow" Tapped="BitmapIcon_Tapped" PointerPressed="BitmapIcon_PointerPressed" PointerReleased="BitmapIcon_PointerReleased" PointerMoved="BitmapIcon_PointerReleased"/>
             </StackPanel>
         </Grid>
         <TextBlock x:Name="CurrentTemperature" HorizontalAlignment="Center" Text="ACTUAL: 69" Foreground="Gray" FontSize="24" Padding="6" />

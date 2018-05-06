@@ -56,7 +56,7 @@ namespace HashBoard
         private CancellationTokenSource EntityUpdateRequestedQuitCancellationToken;
         private CancellationTokenSource EntityUpdateRequestedWakeupCancellationToken;
 
-        private MqttSubscriber mqttSubscriber;
+        private MqttSubscriber mqttSubscriber = new MqttSubscriber();
 
         /// <summary>
         /// Pxoximity sensors
@@ -171,26 +171,7 @@ namespace HashBoard
                 }
             });
         }
-
-        /// <summary>
-        /// Invoked immediately before the Page is unloaded and is no longer the current source of a parent Frame.
-        /// </summary>
-        /// <param name="e"></param>
-        //protected override void OnNavigatingFrom(NavigatingCancelEventArgs e)
-        //{
-        //    // Return the dispaly brightness control back to original setting
-        //    DisplayRequestSetting.RequestRelease();
-
-        //    // Terminate the polling thread if it was started
-        //    PollingThreadCancellationToken?.Cancel();
-
-        //    // Termiante the MQTT worker thread if it was started
-        //    EntityUpdateRequestedQuitCancellationToken?.Cancel();
-        //    EntityUpdateRequestedWakeupCancellationToken?.Cancel();
-
-        //    base.OnNavigatingFrom(e);
-        //}
-
+        
         private void LoadCustomEntityHandler()
         {
             CustomEntities = new List<PanelBuilderBase>()
@@ -372,9 +353,24 @@ namespace HashBoard
         }
 
         /// <summary>
+        /// Shows an error meesage to the user.
+        /// </summary>
+        /// <param name="title"></param>
+        /// <param name="message"></param>
+        private async void ShowErrorDialog(string title, string message)
+        {
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
+            {
+                MessageDialog dialog = new MessageDialog(message, title);
+
+                await dialog.ShowAsync();
+            });
+        }
+
+        /// <summary>
         /// Application settings update
         /// </summary>
-        private async void StartPollingThread()
+        private void StartPollingThread()
         {
             if (SettingsControl.HomeAssistantPollingInterval == default(TimeSpan))
             {
@@ -393,7 +389,7 @@ namespace HashBoard
             {
                 // Kick off the entity updater thread to keep the data in sync
                 PollingThreadCancellationToken = new CancellationTokenSource();
-                await Task.Run(() => PeriodicEntityUpdatePollingThread(PollingThreadCancellationToken.Token), PollingThreadCancellationToken.Token);
+                Task.Factory.StartNew(PeriodicEntityUpdatePollingThread, PollingThreadCancellationToken.Token);
             }
         }
 
@@ -402,46 +398,44 @@ namespace HashBoard
         /// </summary>
         private void StartMqttSubscriber()
         {
+            if (mqttSubscriber.IsSubscribed)
+            {
+                Debug.WriteLine($"{nameof(StartMqttSubscriber)} Disconnecting from previous MQTT subscription.");
+
+                EntityUpdateRequestedQuitCancellationToken?.Cancel();
+                EntityUpdateRequestedWakeupCancellationToken?.Cancel();
+
+                mqttSubscriber.Disconnect();
+            }
+
             if (string.IsNullOrEmpty(SettingsControl.MqttBrokerHostname))
             {
-                Debug.WriteLine($"{nameof(StartMqttSubscriber)} no MQTT subscriber as polling interval is no MQTT broker hostname is set.");
+                Debug.WriteLine($"{nameof(StartMqttSubscriber)} no MQTT subscriber as no MQTT broker hostname is set.");
                 return;
             }
 
-            if (mqttSubscriber == null)
-            {
-                mqttSubscriber = new MqttSubscriber(OnEntityUpdated, OnMqttBrokerConnectionResult);
-            }
+            mqttSubscriber.Connect(OnEntityUpdated, OnMqttBrokerConnectionResult);
 
-            if (!mqttSubscriber.IsSubscribed)
-            {
-                mqttSubscriber.Connect();
+            EntityUpdateRequestedQuitCancellationToken = new CancellationTokenSource();
 
-                Task.Factory.StartNew(MqttEntityUpdateRequestedResponseThread);
+            Task.Factory.StartNew(MqttEntityUpdateRequestedResponseThread, EntityUpdateRequestedQuitCancellationToken.Token);
 
-                Debug.WriteLine($"{nameof(StartMqttSubscriber)} connecting to MQTT.");
-            }
-            else
-            {
-                Debug.WriteLine($"{nameof(StartMqttSubscriber)} MQTT subscriber is already subscribed.");
-            }
+            Debug.WriteLine($"{nameof(StartMqttSubscriber)} connecting to MQTT.");
         }
 
         /// <summary>
         /// Handle MQTT Broker connection attmpts with failure message prompts for the user.
         /// </summary>
         /// <param name="connectionResponse"></param>
-        private async void OnMqttBrokerConnectionResult(byte connectionResponse)
+        private void OnMqttBrokerConnectionResult(byte connectionResponse)
         {
             if (connectionResponse != 0)
             {
-                await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
-                {
-                    MessageDialog dialog = new MessageDialog($"Failed to connect to MQTT broker '{SettingsControl.MqttBrokerHostname}'. " +
-                        $"Response '[{connectionResponse}]': '{mqttSubscriber.Status}'.", "MQTT Broker");
+                ShowErrorDialog("MQTT Broker", $"Failed to connect to MQTT broker '{SettingsControl.MqttBrokerHostname}'. " +
+                    $"Got MQTT response code: {connectionResponse}. {mqttSubscriber.Status}");
 
-                    await dialog.ShowAsync();
-                });
+                EntityUpdateRequestedQuitCancellationToken?.Cancel();
+                EntityUpdateRequestedWakeupCancellationToken?.Cancel();
             }
             else
             {
@@ -693,6 +687,46 @@ namespace HashBoard
             });
         }
 
+        private async Task<DateTime> UpdateEntitiesSinceLastUpdate(DateTime lastUpdatedTime)
+        {   
+            // Get all entities not just the entities we think we want
+            IEnumerable<Entity> allEntities = await GetStateData();
+
+            if (null != allEntities)
+            {
+                // Get all entities which have been updated since the last time we've checked
+                IEnumerable<Entity> entitiesToUpdate = allEntities.Where(x => x.LastUpdated > lastUpdatedTime).ToList();
+
+                if (entitiesToUpdate.Any())
+                {
+                    // For all entities which need to be updated, get all group entities and check their children to see if the group entity needs to be updated as well
+                    lastUpdatedTime = entitiesToUpdate.Select(x => x.LastUpdated).OrderByDescending(x => x).First();
+
+                    foreach (Entity group in allEntities.Where(x => x.Attributes.ContainsKey("entity_id")))
+                    {
+                        IEnumerable<string> childrenEntityIds = ParseEntityIdAttribute(group);
+
+                        if (childrenEntityIds.Any(x => entitiesToUpdate.Any(y => y.EntityId.Equals(x, StringComparison.InvariantCultureIgnoreCase))))
+                        {
+                            if (!entitiesToUpdate.Any(x => x.EntityId == group.EntityId))
+                            {
+                                // Add this group entity which is missing from the update requested list
+                                Debug.WriteLine($"{nameof(UpdateEntitiesSinceLastUpdate)} manually adding group {group.EntityId} to update list.");
+                                entitiesToUpdate = entitiesToUpdate.Union(new List<Entity>() { group });
+                            }
+                        }
+                    }
+
+                    Debug.WriteLine($"{nameof(UpdateEntitiesSinceLastUpdate)} has updated Entities: {string.Join(", ", entitiesToUpdate.Select(x => x.EntityId).ToList())}");
+
+                    // Perform the update on the UI thread; don't block
+                    UpdateEntityPanels(entitiesToUpdate, allEntities);
+                }
+            }
+
+            return lastUpdatedTime;
+        }
+
         /// <summary>
         /// MQTT callback to signal an update is requested. Queue up an event to wake up te MQTT worker thread.
         /// </summary>
@@ -712,14 +746,11 @@ namespace HashBoard
         {
             Debug.WriteLine($"{nameof(MqttEntityUpdateRequestedResponseThread)} is now starting.");
 
-            if (EntityUpdateRequestedQuitCancellationToken != null)
+            if (EntityUpdateRequestedQuitCancellationToken == null)
             {
-                // Already running so simply leave
-                return;
-                //throw new ArgumentException($"{nameof(MqttEntityUpdateRequestedResponseThread)} cancellation token was not NULL.");
+                throw new ArgumentException($"{nameof(MqttEntityUpdateRequestedResponseThread)} cancellation token was not set by caller.");
             }
 
-            EntityUpdateRequestedQuitCancellationToken = new CancellationTokenSource();
             EntityUpdateRequestedWakeupCancellationToken = new CancellationTokenSource();
 
             DateTime lastUpdatedTime = DateTime.Now;
@@ -739,43 +770,44 @@ namespace HashBoard
                 // Confirm cancelation is not requested first
                 if (!EntityUpdateRequestedQuitCancellationToken.IsCancellationRequested)
                 {
-                    // Get all entities not just the entities we think we want
-                    IEnumerable<Entity> allEntities = await WebRequests.GetData<IEnumerable<Entity>>($"api/states");
-
-                    // Get all entities which have been updated since the last time we've checked
-                    IEnumerable<Entity> entitiesToUpdate = allEntities.Where(x => x.LastUpdated > lastUpdatedTime).ToList();
-
-                    if (entitiesToUpdate.Any())
-                    {
-                        // For all entities which need to be updated, get all group entities and check their children to see if the group entity needs to be updated as well
-                        lastUpdatedTime = entitiesToUpdate.Select(x => x.LastUpdated).OrderByDescending(x => x).First();
-
-                        foreach (Entity group in allEntities.Where(x => x.Attributes.ContainsKey("entity_id")))
-                        {
-                            IEnumerable<string> childrenEntityIds = ParseEntityIdAttribute(group);
-
-                            if (childrenEntityIds.Any(x => entitiesToUpdate.Any(y => y.EntityId.Equals(x, StringComparison.InvariantCultureIgnoreCase))))
-                            {
-                                if (!entitiesToUpdate.Any(x => x.EntityId == group.EntityId))
-                                {
-                                    // Add this group entity which is missing from the update requested list
-                                    Debug.WriteLine($"{nameof(MqttEntityUpdateRequestedResponseThread)} manually adding group {group.EntityId} to update list.");
-                                    entitiesToUpdate = entitiesToUpdate.Union(new List<Entity>() { group });
-                                }
-                            }
-                        }
-
-                        Debug.WriteLine($"{nameof(MqttEntityUpdateRequestedResponseThread)} has updated Entities: {string.Join(", ", entitiesToUpdate.Select(x => x.EntityId).ToList())}");
-
-                        // Perform the update on the UI thread; don't block
-                        UpdateEntityPanels(entitiesToUpdate, allEntities);
-                    }
+                    lastUpdatedTime = await UpdateEntitiesSinceLastUpdate(lastUpdatedTime);
                 }
             }
 
             Debug.WriteLine($"{nameof(MqttEntityUpdateRequestedResponseThread)} is now terminating.");
         }
-        
+
+        /// <summary>
+        /// Polling thread. Updates all entity panels with updated state information after querying
+        /// Home Assistant for all entities.
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        private async void PeriodicEntityUpdatePollingThread()
+        {
+            Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} is starting.");
+
+            if (PollingThreadCancellationToken == null)
+            {
+                throw new ArgumentException($"{nameof(PeriodicEntityUpdatePollingThread)} cancellation token was not set by caller.");
+            }
+
+            DateTime lastUpdatedTime = DateTime.Now;
+
+            // Infinite loop until told to stop
+            while (!PollingThreadCancellationToken.IsCancellationRequested)
+            {
+                Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} now sleeping.");
+
+                await Task.Delay(SettingsControl.HomeAssistantPollingInterval, PollingThreadCancellationToken.Token).ContinueWith(tsk => { });
+
+                Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} is awake. Now processing.");
+
+                lastUpdatedTime = await UpdateEntitiesSinceLastUpdate(lastUpdatedTime);
+            }
+
+            Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} now terminating.");
+        }
+
         /// <summary>
         /// Queries Home Assistant for state information and then populates the main view with panels to 
         /// show the state information.
@@ -786,60 +818,47 @@ namespace HashBoard
             ScrollViewer scrollViewer = this.FindName("MainScrollView") as ScrollViewer;
             scrollViewer.Background = ThemeControl.BackgroundBrush;
 
-            StackPanel stackPanel = null;
+            IEnumerable<Entity> entities = null;
 
             if (!string.IsNullOrEmpty(SettingsControl.HomeAssistantHostname))
             {
-                Task<List<Entity>> task = WebRequests.GetData<List<Entity>>("api/states");
-
-                stackPanel = CreateViews(await task);
-            }
-            else
-            {
-                stackPanel = CreateViews(new List<Entity>());
+                entities = await GetStateData();
             }
 
-            scrollViewer.Content = stackPanel;
+            scrollViewer.Content = CreateViews(entities);
 
             // By setting a center horizontal aligntment we trim off the edges so that the dead space around
-            // the left and right edges of the screen will render black.
-            scrollViewer.HorizontalAlignment = HorizontalAlignment.Center;
+            // the left and right edges of the screen will render black. This only works well when there's 
+            // content which wraps the screen else we'll trim the background image as well, so guard against
+            // null content before applying this setting.
+            if (null != entities)
+            {
+                scrollViewer.HorizontalAlignment = HorizontalAlignment.Center;
+            }
         }
 
         /// <summary>
-        /// Polling thread. Updates all entity panels with updated state information after querying
-        /// Home Assistant for all entities.
+        /// Queries home assistant for state data. If a connection error occurs, shows the error via UI and stops all background threads.
         /// </summary>
-        /// <param name="cancellationToken"></param>
-        private async void PeriodicEntityUpdatePollingThread(CancellationToken cancellationToken)
+        /// <returns></returns>
+        private async Task<IEnumerable<Entity>> GetStateData()
         {
-            Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} now running.");
-
-            // Infinite loop until told to stop
-            while (!cancellationToken.IsCancellationRequested)
+            try
             {
-                if (!cancellationToken.IsCancellationRequested && !string.IsNullOrEmpty(SettingsControl.HomeAssistantHostname))
-                {
-                    Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} is awake. Now processing.");
+                Task<List<Entity>> task = WebRequests.GetData<List<Entity>>("api/states");
 
-                    Task<List<Entity>> task = WebRequests.GetData<List<Entity>>("api/states");
+                return await task;
+            }
+            catch (Exception e)
+            {
+                ShowErrorDialog("Connection Failure", $"Failed to connect to Home Assistant. URI attempted: {SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/states?apiPassword=[xxx].");
 
-                    List<Entity> allEntities = await task;
-
-                    await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-                    {
-                        // Shared resource
-                        throw new NotImplementedException("need to revist this ...");
-                            //UpdateChildPanelIfneeded((FrameworkElement)this.Content, allEntities);
-                    });
-                }
-
-                Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} now sleeping.");
-
-                Task.Delay(SettingsControl.HomeAssistantPollingInterval, cancellationToken).ContinueWith(tsk => { }).Wait();
+                PollingThreadCancellationToken?.Cancel();
+                EntityUpdateRequestedQuitCancellationToken?.Cancel();
+                EntityUpdateRequestedWakeupCancellationToken?.Cancel();
             }
 
-            Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} now terminating.");
+            return null;
         }
 
         /// <summary>
@@ -935,7 +954,6 @@ namespace HashBoard
                 State = "off",
                 Attributes = new Dictionary<string, dynamic>() {
                     { "friendly_name", CustomgroupPanelName },
-                    //{ "entity_id", "[" + string.Join(", ", childrenEntities.Select(x => "\"" + x.EntityId + "\"")) + "]"},
                     { "entity_id", childrenEntities.Select(x => x.EntityId).ToList() },
                     { "order", 999 },
                     { "view", true },
@@ -944,17 +962,23 @@ namespace HashBoard
             return CreateEntitiesInView(view, childrenEntities);
         }
 
-        private Grid CreateHeaderTextBlock(Entity entity)
+        /// <summary>
+        /// Create a header for the provided group view entity.
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        private Grid CreateHeaderTextBlockForGoupViewEntity(Entity entity)
         {
             Grid grid = new Grid();
             grid.Background = new SolidColorBrush(Colors.Black);
             grid.Background.Opacity = 0.4;
-            grid.Padding = new Thickness(6);
+            grid.Padding = new Thickness(4);
 
             TextBlock textBlock = new TextBlock();
             textBlock.Text = Convert.ToString(entity.Attributes["friendly_name"]).ToUpper();
             textBlock.FontSize = 18;
             textBlock.FontWeight = FontWeights.Bold;
+            textBlock.Foreground = new SolidColorBrush(Colors.White);
 
             grid.Children.Add(textBlock);
 
@@ -972,17 +996,27 @@ namespace HashBoard
             stackPanel.Orientation = Orientation.Vertical;
             stackPanel.HorizontalAlignment = HorizontalAlignment.Center;
 
-            // Get all home assistant "group" entities which have the "view=true" attribute set in customizations.yaml
-            IEnumerable<Entity> entityHeaders = allEntities.Where(group => group.Attributes.ContainsKey("view"));
-
-            // Add all single and group entities which are tied to each view
-            foreach (Entity entityHeader in entityHeaders)
+            if (null != allEntities)
             {
-                stackPanel.Children.Add(CreateHeaderTextBlock(entityHeader));
-                stackPanel.Children.Add(CreateEntitiesInView(entityHeader, allEntities));
+                // Get all home assistant "group" entities which have the "view=true" attribute set in customizations.yaml
+                IEnumerable<Entity> entityHeaders = allEntities.Where(group => group.Attributes.ContainsKey("view"));
+
+                // Add all single and group entities which are tied to each view
+                foreach (Entity entityHeader in entityHeaders)
+                {
+                    stackPanel.Children.Add(CreateHeaderTextBlockForGoupViewEntity(entityHeader));
+                    stackPanel.Children.Add(CreateEntitiesInView(entityHeader, allEntities));
+                }
+
+                // Only add a header if we loaded user content as well
+                Entity setupViewEntity = new Entity() { Attributes = new Dictionary<string, dynamic>() {
+                    { "friendly_name", "settings" },
+                    { "view", "yes" } } };
+
+                stackPanel.Children.Add(CreateHeaderTextBlockForGoupViewEntity(setupViewEntity));
             }
-            
-            // Add a Settings panel
+
+            // Add the setup panels
             Entity settingsEntity = CreateCustomStaticPanel(SettingsControlPanelName, "panel-settings.png");
             Entity themeEntity = CreateCustomStaticPanel(ThemeControlMenuPanelName, "panel-paintbrush.png");
             WrapPanel customWrapPanel = CreateCustomGroupPanel(new List<Entity>() { settingsEntity, themeEntity });
@@ -1004,39 +1038,46 @@ namespace HashBoard
 
             foreach (string groupEntityId in entityHeader.Attributes["entity_id"])
             {
-                Entity entity = allEntities.First(x => x.EntityId == groupEntityId);
+                Entity entity = allEntities.FirstOrDefault(x => x.EntityId == groupEntityId);
 
-                if (entity.Attributes.ContainsKey("entity_id"))
+                if (null == entity)
                 {
-                    // Group panel
-                    Panel panelGroup = CreateGroupEntityPanel(entity, allEntities);
-
-                    if (panelGroup != null)
-                    {
-                        wrapPanel.Children.Add(panelGroup);
-                    }
-
-                    // Children entities
-                    foreach (string childEntityId in entity.Attributes["entity_id"])
-                    {
-                        Entity childEntity = allEntities.First(x => x.EntityId == childEntityId);
-
-                        Panel panelChild = CreateChildEntityPanel(childEntity);
-
-                        if (panelChild != null)
-                        {
-                            wrapPanel.Children.Add(panelChild);
-                        }
-                    }
+                    ShowErrorDialog("Config Error", $"Unable to find entity '{groupEntityId}' in the '{entityHeader.EntityId}' group.");
                 }
                 else
                 {
-                    // Single entity
-                    Panel panel = CreateChildEntityPanel(entity);
-
-                    if (panel != null)
+                    if (entity.Attributes.ContainsKey("entity_id"))
                     {
-                        wrapPanel.Children.Add(panel);
+                        // Group panel
+                        Panel panelGroup = CreateGroupEntityPanel(entity, allEntities);
+
+                        if (panelGroup != null)
+                        {
+                            wrapPanel.Children.Add(panelGroup);
+                        }
+
+                        // Children entities
+                        foreach (string childEntityId in entity.Attributes["entity_id"])
+                        {
+                            Entity childEntity = allEntities.First(x => x.EntityId == childEntityId);
+
+                            Panel panelChild = CreateChildEntityPanel(childEntity);
+
+                            if (panelChild != null)
+                            {
+                                wrapPanel.Children.Add(panelChild);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Single entity
+                        Panel panel = CreateChildEntityPanel(entity);
+
+                        if (panel != null)
+                        {
+                            wrapPanel.Children.Add(panel);
+                        }
                     }
                 }
             }

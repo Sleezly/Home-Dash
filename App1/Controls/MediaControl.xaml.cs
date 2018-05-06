@@ -106,16 +106,16 @@ namespace Hashboard
             if (string.Equals(PanelEntity.State, "playing", StringComparison.InvariantCultureIgnoreCase))
             {
                 bitmapIcon.Tag = "media_play_pause";
-                bitmapIcon.UriSource = new Uri($"ms-appx:///Assets/media-pause.png");
+                bitmapIcon.UriSource = new Uri($"ms-appx:///Assets/media/media-pause.png");
             }
             else if (string.Equals(PanelEntity.State, "paused", StringComparison.InvariantCultureIgnoreCase))
             {
-                bitmapIcon.UriSource = new Uri($"ms-appx:///Assets/media-play.png");
+                bitmapIcon.UriSource = new Uri($"ms-appx:///Assets/media/media-play.png");
                 bitmapIcon.Tag = "media_play_pause";
             }
             else
             {
-                bitmapIcon.UriSource = new Uri($"ms-appx:///Assets/power.png");
+                bitmapIcon.UriSource = new Uri($"ms-appx:///Assets/buttons/power.png");
                 bitmapIcon.Tag = "toggle";
             }
 

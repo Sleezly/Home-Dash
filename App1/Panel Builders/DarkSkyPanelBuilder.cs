@@ -54,60 +54,7 @@ namespace HashBoard
 
         private static Image GetWeatherImage(string darkSkySensorState)
         {
-            string weatherImageAsset;
-
-            if (darkSkySensorState.Contains("clear") || darkSkySensorState.Contains("sun") || darkSkySensorState.Contains("weather-night"))
-            {
-                if (darkSkySensorState.Contains("night"))
-                {
-                    weatherImageAsset = "weather_clear_night.png";
-                }
-                else
-                {
-                    weatherImageAsset = "weather_clear_day.png";
-                }
-            }
-            else if (darkSkySensorState.Contains("partly"))
-            {
-                if (darkSkySensorState.Contains("night"))
-                {
-                    weatherImageAsset = "weather_partly_cloudy_night.png";
-                }
-                else
-                {
-                    weatherImageAsset = "weather_partly_cloudy_day.png";
-                }
-            }
-            else if (darkSkySensorState.Contains("sleet") || darkSkySensorState.Contains("snowy-rain"))
-            {
-                weatherImageAsset = "weather_snow_rain.png";
-            }
-            else if (darkSkySensorState.Contains("cloud"))
-            {
-                weatherImageAsset = "weather_cloudy.png";
-            }
-            else if (darkSkySensorState.Contains("fog"))
-            {
-                weatherImageAsset = "weather_fog.png";
-            }
-            else if (darkSkySensorState.Contains("rain") || darkSkySensorState.Contains("pour"))
-            {
-                weatherImageAsset = "weather_rain.png";
-            }
-            else if (darkSkySensorState.Contains("snow"))
-            {
-                weatherImageAsset = "weather_snow.png";
-            }
-            else if (darkSkySensorState.Contains("wind"))
-            {
-                weatherImageAsset = "weather_windy.png";
-            }
-            else
-            {
-                weatherImageAsset = "weather_na.png";
-            }
-
-            return Imaging.LoadImage(weatherImageAsset);
+            return Imaging.LoadImage($"weather\\{darkSkySensorState.Split(':')[1]}.png");
         }
     }
 }

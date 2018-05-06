@@ -10,15 +10,15 @@ namespace HashBoard
 {
     public abstract class PanelBuilderBase
     {
-        private const int PanelSize = 170;
+        private const int PanelSize = 166;
 
-        protected const int PanelPadding = 5;
+        protected const int PanelPadding = 4;
 
         protected const int PanelMargins = 2;
 
         public const double DefaultOpacity = 0.8;
 
-        public const double PressedOpacity = 0.4;
+        public const double PressedOpacity = 0.5;
 
         public const double StateIsOffOpacity = 0.3;
 

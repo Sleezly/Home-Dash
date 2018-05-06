@@ -40,6 +40,6 @@
             <Ellipse x:Name="BrightnessCircle" Width="24" Height="24" Stroke="{ThemeResource DefaultTextForegroundThemeBrush}" StrokeThickness="2" HorizontalAlignment="Left" PointerPressed="BrightnessCircle_PointerPressed"  PointerMoved="BrightnessCircle_PointerMoved"/>
             <TextBlock HorizontalAlignment="Left" Margin="30,40,0,0">BRIGHTNESS</TextBlock>
         </Grid>
-        <BitmapIcon x:Name="ButtonPower" HorizontalAlignment="Center" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" UriSource="ms-appx:///Assets/power.png" Width="56" Height="56" Tapped="PowerButton_Tapped" PointerPressed="PowerButton_PointerPressed" PointerExited="PowerButton_PointerExited" />
+        <BitmapIcon x:Name="ButtonPower" HorizontalAlignment="Center" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" UriSource="ms-appx:///Assets/buttons/power.png" Width="56" Height="56" Tapped="PowerButton_Tapped" PointerPressed="PowerButton_PointerPressed" PointerExited="PowerButton_PointerExited" />
     </StackPanel>
 </UserControl>

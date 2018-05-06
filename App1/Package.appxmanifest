@@ -3,8 +3,8 @@
   <Identity Name="3cbaccc2-6eee-4617-bffc-82178c9084a8" Publisher="CN=sleez" Version="1.0.0.0" />
   <mp:PhoneIdentity PhoneProductId="3cbaccc2-6eee-4617-bffc-82178c9084a8" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
-    <DisplayName>App1</DisplayName>
-    <PublisherDisplayName>sleez</PublisherDisplayName>
+    <DisplayName>Home Dash</DisplayName>
+    <PublisherDisplayName>Leslie Trowbridge</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   <Dependencies>
@@ -14,8 +14,8 @@
     <Resource Language="x-generate" />
   </Resources>
   <Applications>
-    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="App1.App">
-      <uap:VisualElements DisplayName="Hashboard" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" Description="Home Assistant Dashboard using Windows Universal." BackgroundColor="transparent">
+    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="HomeDash.App">
+      <uap:VisualElements DisplayName="Home Dash" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" Description="Home Assistant Dashboard using Windows Universal." BackgroundColor="transparent">
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png">
         </uap:DefaultTile>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />

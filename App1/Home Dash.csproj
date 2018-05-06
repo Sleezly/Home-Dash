@@ -7,8 +7,8 @@
     <ProjectGuid>{10BA3C7F-4EBC-408E-969E-9D3D8B25CE61}</ProjectGuid>
     <OutputType>AppContainerExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Hashboard</RootNamespace>
-    <AssemblyName>Hashboard</AssemblyName>
+    <RootNamespace>HomeDash</RootNamespace>
+    <AssemblyName>Home Dash</AssemblyName>
     <DefaultLanguage>en-US</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
     <TargetPlatformVersion Condition=" '$(TargetPlatformVersion)' == '' ">10.0.16299.0</TargetPlatformVersion>
@@ -95,7 +95,6 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\BaseControl.cs" />
     <Compile Include="Controls\ClimateControl.xaml.cs">
       <DependentUpon>ClimateControl.xaml</DependentUpon>
     </Compile>
@@ -144,35 +143,35 @@
   <ItemGroup>
     <Content Include="Assets\panel-paintbrush.png" />
     <Content Include="Assets\panel-settings.png" />
-    <Content Include="Assets\weather_na.png" />
-    <Content Include="Assets\arrow-down.png" />
-    <Content Include="Assets\arrow-up.png" />
-    <Content Include="Assets\background-blue.jpg" />
-    <Content Include="Assets\background-red.png" />
-    <Content Include="Assets\climate-leaf.png" />
-    <Content Include="Assets\media-play.png" />
-    <Content Include="Assets\media-shuffle.png" />
-    <Content Include="Assets\media-skip-next.png" />
-    <Content Include="Assets\media-skip-previous.png" />
-    <Content Include="Assets\media-stop.png" />
-    <Content Include="Assets\media-pause.png" />
-    <Content Include="Assets\power.png" />
-    <Content Include="Assets\volume-high.png" />
-    <Content Include="Assets\volume-low.png" />
-    <Content Include="Assets\volume-medium.png" />
-    <Content Include="Assets\volume-minus.png" />
-    <Content Include="Assets\volume-off.png" />
-    <Content Include="Assets\volume-plus.png" />
-    <Content Include="Assets\weather_fog.png" />
-    <Content Include="Assets\weather_clear_night.png" />
-    <Content Include="Assets\weather_cloudy.png" />
-    <Content Include="Assets\weather_partly_cloudy_night.png" />
-    <Content Include="Assets\weather_partly_cloudy_day.png" />
-    <Content Include="Assets\weather_clear_day.png" />
-    <Content Include="Assets\weather_rain.png" />
-    <Content Include="Assets\weather_snow.png" />
-    <Content Include="Assets\weather_snow_rain.png" />
-    <Content Include="Assets\weather_windy.png" />
+    <Content Include="Assets\Weather\weather-lightning-rainy.png" />
+    <Content Include="Assets\Weather\error.png" />
+    <Content Include="Assets\Buttons\arrow-down.png" />
+    <Content Include="Assets\Buttons\arrow-up.png" />
+    <Content Include="Assets\Background\background-blue.jpg" />
+    <Content Include="Assets\Background\background-red.png" />
+    <Content Include="Assets\Media\media-play.png" />
+    <Content Include="Assets\Media\media-shuffle.png" />
+    <Content Include="Assets\Media\media-skip-next.png" />
+    <Content Include="Assets\Media\media-skip-previous.png" />
+    <Content Include="Assets\Media\media-stop.png" />
+    <Content Include="Assets\Media\media-pause.png" />
+    <Content Include="Assets\Buttons\power.png" />
+    <Content Include="Assets\Media\volume-high.png" />
+    <Content Include="Assets\Media\volume-low.png" />
+    <Content Include="Assets\Media\volume-medium.png" />
+    <Content Include="Assets\Media\volume-minus.png" />
+    <Content Include="Assets\Media\volume-off.png" />
+    <Content Include="Assets\Media\volume-plus.png" />
+    <Content Include="Assets\Weather\weather-fog.png" />
+    <Content Include="Assets\Weather\weather-night.png" />
+    <Content Include="Assets\Weather\weather-cloudy.png" />
+    <Content Include="Assets\Weather\cloud.png" />
+    <Content Include="Assets\Weather\weather-partlycloudy.png" />
+    <Content Include="Assets\Weather\weather-sunny.png" />
+    <Content Include="Assets\Weather\weather-pouring.png" />
+    <Content Include="Assets\Weather\weather-snowy.png" />
+    <Content Include="Assets\Weather\weather-snowy-rainy.png" />
+    <Content Include="Assets\Weather\weather-windy.png" />
     <Content Include="Properties\Default.rd.xml" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\SplashScreen.scale-200.png" />

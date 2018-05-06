@@ -34,53 +34,55 @@ namespace HashBoard
         public bool IsSubscribed{ get; set; } 
         public string Status { get; set; }
 
-        public MqttSubscriber(OnEntityUpdated onEntityUpdatedCallback, OnConnectionResult onConnectionResultCallback)
+        public MqttSubscriber()
         {
             IsSubscribed = false;
             Status = "No connection has been attempted.";
-
-            EntityUpdatedCallback = onEntityUpdatedCallback;
-            OnConnectCallback = onConnectionResultCallback;
         }
 
         /// <summary>
         /// Attempt to connect and subscribe to the MQTT broker.
         /// </summary>
         /// <param name="entities"></param>
-        public void Connect()
+        public void Connect(OnEntityUpdated onEntityUpdatedCallback, OnConnectionResult onConnectionResultCallback)
         {
-            if (!IsSubscribed)
+            if (IsSubscribed)
             {
-                Task.Factory.StartNew(() =>
-                {
-                    byte response = 255;
-                    try
-                    {
-                        client = new MqttClient(SettingsControl.MqttBrokerHostname);
-
-                        client.MqttMsgPublishReceived += OnMessageReceviedWorker;
-
-                        response = client.Connect(Guid.NewGuid().ToString(), SettingsControl.MqttUsername, SettingsControl.MqttPassword);
-
-                        if (response == 0)
-                        {
-                            client.Subscribe(new string[] { SettingsControl.MqttStateStream }, new byte[] { 2 });
-
-                            IsSubscribed = true;
-                        }
-
-                        Status = ConnackResponseCodes[response];
-                    }
-                    catch (Exception e)
-                    {
-                        Status = e.Message;
-                    }
-                    finally
-                    { 
-                        OnConnectCallback(response);
-                    }
-                });
+                throw new ArgumentException("Client is already subscribed.");
             }
+
+            EntityUpdatedCallback = onEntityUpdatedCallback;
+            OnConnectCallback = onConnectionResultCallback;
+
+            Task.Factory.StartNew(() =>
+            {
+                byte response = 255;
+                try
+                {
+                    client = new MqttClient(SettingsControl.MqttBrokerHostname);
+
+                    client.MqttMsgPublishReceived += OnMessageReceviedWorker;
+
+                    response = client.Connect(Guid.NewGuid().ToString(), SettingsControl.MqttUsername, SettingsControl.MqttPassword);
+
+                    if (response == 0)
+                    {
+                        client.Subscribe(new string[] { SettingsControl.MqttStateStream }, new byte[] { 2 });
+
+                        IsSubscribed = true;
+                    }
+
+                    Status = ConnackResponseCodes[response];
+                }
+                catch (Exception e)
+                {
+                    Status = e.Message;
+                }
+                finally
+                { 
+                    OnConnectCallback(response);
+                }
+            });
         }
 
         /// <summary>
