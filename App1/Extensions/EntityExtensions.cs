@@ -57,38 +57,34 @@ namespace Hashboard
         }
 
         /// <summary>
-        /// Converts the 'supported_features' entity attribute.
+        /// Checks if this entity supports the requested feature.
         /// </summary>
         /// <param name="entity"></param>
         /// <returns></returns>
-        public static SupportedFeatures GetSupportedFeatures(this Entity entity, IEnumerable<Entity> childrenEntities = null)
+        public static bool HasSupportedFeatures(this Entity entity, uint supportedFeatures, IEnumerable<Entity> childrenEntities = null)
         {
-            // For group entities, scan the children entities
-            if (childrenEntities != null)
-            {
-                if (childrenEntities.Any(x => x.GetSupportedFeatures() == SupportedFeatures.Colors))
-                {
-                    return SupportedFeatures.Colors;
-                }
-                else if (childrenEntities.Any(x => x.GetSupportedFeatures() == SupportedFeatures.ColorTemperature))
-                {
-                    return SupportedFeatures.ColorTemperature;
-                }
-                else if (childrenEntities.Any(x => x.GetSupportedFeatures() == SupportedFeatures.BrightnessOnly))
-                {
-                    return SupportedFeatures.BrightnessOnly;
-                }
+            return (GetSupportedFeatures(entity, childrenEntities) & supportedFeatures) == supportedFeatures;
+        }
 
-                throw new ArgumentException($"Group entity {entity.EntityId} does not reference any entities with a" +
-                    "'supported_features' attribute.");
+        /// <summary>
+        /// Gets the 'supported_features' entity attribute.
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        public static uint GetSupportedFeatures(this Entity entity, IEnumerable<Entity> childrenEntities = null)
+        {
+            // For group entities also scan the children entities
+            uint supportedFeatures = 0;
+
+            if (null != childrenEntities)
+            {
+                foreach (Entity child in childrenEntities)
+                {
+                    supportedFeatures |= GetSupportedFeatures(child, null);
+                }
             }
 
-            if (!entity.Attributes.ContainsKey("supported_features"))
-            {
-                throw new ArgumentException($"Entity {entity.EntityId} is missing 'supported_features' attribute.");
-            }
-
-            return (SupportedFeatures)Convert.ToInt32(entity.Attributes["supported_features"]);
+            return supportedFeatures | Convert.ToUInt32(entity.Attributes["supported_features"]);
         }
     }
 }

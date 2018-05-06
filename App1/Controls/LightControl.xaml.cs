@@ -69,7 +69,7 @@ namespace Hashboard
 
                 // Only allow interaction with the color wheel when color behavior is supported. To signify the color wheel
                 // is disabled, also add a gray-tone to the colors.
-                if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == SupportedFeatures.Colors)
+                if (PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.Color, ChildrenEntities))
                 {
                     line.Tapped += ColorWheelLine_Tapped;
                     line.PointerReleased += ColorWheelLine_PointerReleased;
@@ -221,7 +221,7 @@ namespace Hashboard
             }
 
             // ColorTemperature should be a constant yellowish-hue line for brightness-only lights
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == SupportedFeatures.BrightnessOnly)
+            if (!PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.ColorTemperature, ChildrenEntities))
             {
                 Rectangle colorTemperature = this.FindName("ColorTemperature") as Rectangle;
                 colorTemperature.Fill = new SolidColorBrush(Colors.LightYellow);
@@ -576,7 +576,7 @@ namespace Hashboard
         /// <param name="e"></param>
         private void ColorWheelGrid_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == SupportedFeatures.Colors)
+            if (PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.Color, ChildrenEntities))
             {
                 ShowColorWheelCircle(Visibility.Collapsed);
             }
@@ -589,7 +589,7 @@ namespace Hashboard
         /// <param name="e"></param>
         private void ColorWheelGrid_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == SupportedFeatures.Colors)
+            if (PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.Color, ChildrenEntities))
             {
                 ShowColorWheelCircle(Visibility.Visible);
             }
@@ -602,7 +602,7 @@ namespace Hashboard
         /// <param name="e"></param>
         private void ColorWheelGrid_PointerExited(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) == SupportedFeatures.Colors)
+            if (PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.Color, ChildrenEntities))
             {
                 if (e.Pointer.IsInContact)
                 {
@@ -613,7 +613,7 @@ namespace Hashboard
 
         private void ColorTemperature_Tapped(object sender, TappedRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != SupportedFeatures.BrightnessOnly)
+            if (PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.ColorTemperature, ChildrenEntities))
             {
                 ShowColorTemperatureCircle(Visibility.Visible);
 
@@ -626,7 +626,7 @@ namespace Hashboard
 
         private void ColorTemperature_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != SupportedFeatures.BrightnessOnly)
+            if (PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.ColorTemperature, ChildrenEntities))
             {
                 ShowColorTemperatureCircle(Visibility.Collapsed);
             }
@@ -634,7 +634,7 @@ namespace Hashboard
 
         private void ColorTemperature_PointerReleased(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != SupportedFeatures.BrightnessOnly)
+            if (PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.ColorTemperature, ChildrenEntities))
             {
                 ShowColorTemperatureCircle(Visibility.Visible);
             }
@@ -642,7 +642,7 @@ namespace Hashboard
 
         private void SetColorTemperature(double percentage)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != SupportedFeatures.BrightnessOnly)
+            if (PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.ColorTemperature, ChildrenEntities))
             {
                 int temperature = Convert.ToInt32((MaximumColorTemperature - MinimumColorTemperature) * percentage + MinimumColorTemperature);
 
@@ -654,7 +654,7 @@ namespace Hashboard
 
         private void ColorTemperatureCircle_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != SupportedFeatures.BrightnessOnly)
+            if (PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.ColorTemperature, ChildrenEntities))
             {
                 if (e.Pointer.IsInContact)
                 {
@@ -665,7 +665,7 @@ namespace Hashboard
 
         private void ColorTemperatureCircle_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
-            if (PanelEntity.GetSupportedFeatures(ChildrenEntities) != SupportedFeatures.BrightnessOnly)
+            if (PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.ColorTemperature, ChildrenEntities))
             {
                 if (e.Pointer.IsInContact)
                 {

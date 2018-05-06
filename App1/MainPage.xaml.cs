@@ -849,7 +849,7 @@ namespace HashBoard
 
                 return await task;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 ShowErrorDialog("Connection Failure", $"Failed to connect to Home Assistant. URI attempted: {SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/states?apiPassword=[xxx].");
 
