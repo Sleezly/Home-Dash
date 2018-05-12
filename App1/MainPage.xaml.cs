@@ -21,6 +21,7 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using static Hashboard.PanelTouchHandler;
+using static HashBoard.Entity;
 using static HashBoard.PanelBuilderBase;
 
 namespace HashBoard
@@ -205,7 +206,10 @@ namespace HashBoard
                 new MediaPlayerPanelBuilder() {
                     EntityIdStartsWith = "media_player.",
                     Size = EntitySize.Normal,
-                    TapHandler = new PanelTouchHandler("media_play_pause", ResponseExpected.EntityUpdated),
+                    TapHandler = new PanelTouchHandler(new Dictionary<uint, string> {
+                        { (uint)MediaPlatformSupportedFeatures.PlayMedia, "media_play_pause" }, // ServiceAction for PlayMedia supported_feature
+                        { (uint)MediaPlatformSupportedFeatures.TurnOn, "toggle" },              // ServiceAction for TurnOn supported_feature
+                        }, ResponseExpected.EntityUpdated),
                     TapAndHoldHandler = new PanelTouchHandler(nameof(MediaControl), ResponseExpected.None) },
 
                 // Light Platform
@@ -217,7 +221,7 @@ namespace HashBoard
                 // Script Platform
                 new NameOnlyPanelBuilder() {
                     EntityIdStartsWith = "script.",
-                    TapHandler = new PanelTouchHandler(null, ResponseExpected.None) },
+                    TapHandler = new PanelTouchHandler(string.Empty, ResponseExpected.None) },
 
                 // Switch Platform
                 new GenericPanelBuilder() {
@@ -480,7 +484,7 @@ namespace HashBoard
             {
                 PanelData panelData = PanelData.GetPanelData(sender);
 
-                HandleTouchEvent(sender as Panel, panelData, panelData.TapAndHoldHandler.Service, panelData.TapAndHoldHandler.Response);
+                HandleTouchEvent(sender as Panel, panelData, panelData.TapAndHoldHandler.GetServiceAction(panelData.Entity), panelData.TapAndHoldHandler.Response);
             }
         }
 
@@ -508,7 +512,7 @@ namespace HashBoard
             }
             else
             {
-                HandleTouchEvent(sender as Panel, panelData, panelData.TapHandler.Service, panelData.TapHandler.Response);
+                HandleTouchEvent(sender as Panel, panelData, panelData.TapHandler.GetServiceAction(panelData.Entity), panelData.TapHandler.Response);
             }
         }
 
