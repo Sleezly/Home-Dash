@@ -103,11 +103,6 @@ namespace HashBoard
 
             this.RequestedTheme = ThemeControl.GetApplicationTheme();
 
-            // Set the theme
-            ScrollViewer scrollViewer = this.FindName("MainScrollView") as ScrollViewer;
-            //scrollViewer.Background = ThemeControl.BackgroundBrush;
-            scrollViewer.Background = new SolidColorBrush(Colors.Black);
-
             LoadCustomEntityHandler();
         }
 
@@ -151,13 +146,13 @@ namespace HashBoard
         /// <param name="e"></param>
         private async void LightSensor_ReadingChanged(LightSensor lightSensor, LightSensorReadingChangedEventArgs e)
         {
-            await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
                 LightSensorReading lightSensorReading = lightSensor.GetCurrentReading();
 
                 if (BrightnessOverrideSetting != null && BrightnessOverrideSetting.IsSupported)
                 {
-                    const double maximumAllowedBrightness = 0.5;
+                    const double maximumAllowedBrightness = 0.15;
                     const double highestLuxValueBeforeFullBrightness = 25.0;
 
                     double brightness = Math.Min(lightSensorReading.IlluminanceInLux, highestLuxValueBeforeFullBrightness) / highestLuxValueBeforeFullBrightness * maximumAllowedBrightness;
@@ -235,12 +230,12 @@ namespace HashBoard
                     TapHandler = new PanelTouchHandler("trigger", ResponseExpected.None),
                     TapAndHoldHandler = new PanelTouchHandler("toggle", ResponseExpected.EntityUpdated) },
                 
-                // Hasboard Settings Control Panel
+                // Default Settings Control Panel
                 new NameOnlyPanelBuilder() {
                     EntityIdStartsWith = $"{SettingsControlPanelName}.",
                     TapHandler = new PanelTouchHandler(nameof(SettingsControl), ResponseExpected.None) },
 
-                // Hasboard Theme Control Panel
+                // Default Theme Control Panel
                 new NameOnlyPanelBuilder() {
                     EntityIdStartsWith = $"{ThemeControlMenuPanelName}.",
                     TapHandler = new PanelTouchHandler(nameof(ThemeControl), ResponseExpected.None) },
@@ -249,7 +244,7 @@ namespace HashBoard
                 new GenericPanelBuilder() { EntityIdStartsWith = string.Empty },
             };
 
-            // Where tap and tap+hold is requested, assign the touch events for proper touch routing
+            // Where tap or tap+hold are requested, assign the touch events for proper touch routing
             foreach (PanelBuilderBase customPanelBuilder in CustomEntities)
             {
                 if (customPanelBuilder.TapHandler != null)

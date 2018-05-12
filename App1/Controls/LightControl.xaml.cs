@@ -149,7 +149,7 @@ namespace Hashboard
                             Convert.ToByte(x.Attributes["rgb_color"][1]),
                             Convert.ToByte(x.Attributes["rgb_color"][2]))).Cast<RGB>());
 
-                        SetColorCircleLocationAndColor(averageColor);
+                        SetColorWheelLocation(averageColor);
 
                         ShowColorWheelCircle(Visibility.Visible);
                     }
@@ -202,7 +202,7 @@ namespace Hashboard
                             B = Convert.ToByte(rgbColors[2]),
                         };
 
-                        SetColorCircleLocationAndColor(rgb);
+                        SetColorWheelLocation(rgb);
 
                         ShowColorWheelCircle(Visibility.Visible);
                     }
@@ -235,7 +235,7 @@ namespace Hashboard
         /// Updates the Color Wheel based on input from color source.
         /// </summary>
         /// <param name="rgb"></param>
-        private void SetColorCircleLocationAndColor(RGB rgb)
+        private void SetColorWheelLocation(RGB rgb)
         {
             Grid grid = this.FindName("ColorWheel") as Grid;
             Ellipse ellipse = this.FindName("ColorWheelCircle") as Ellipse;
@@ -266,7 +266,7 @@ namespace Hashboard
         /// <param name="pointFromLine"></param>
         /// <param name="pointFromParent"></param>
         /// <param name="marginFromParent"></param>
-        private void UpdateColorWheel(Line line, Point pointFromLine, Point pointFromParent, Thickness marginFromParent)
+        private void SetColorWheelCircleLocationAndSendColorUpdate(Line line, Point pointFromLine, Point pointFromParent, Thickness marginFromParent)
         {
             Ellipse ellipse = this.FindName("ColorWheelCircle") as Ellipse;
 
@@ -282,7 +282,7 @@ namespace Hashboard
 
             // Use the same calculation to place the circle via-RGB as we do for cursor placement as this guarantees
             // both methods to place the ellipse generate the same result.
-            SetColorCircleLocationAndColor(rgb);
+            SetColorWheelLocation(rgb);
 
             // Send the RGB update via REST API
             SendColorUpdate(CurrentColor);
@@ -538,6 +538,17 @@ namespace Hashboard
             }
         }
 
+        private void PlaceColorWheelCircle(PointerPoint pointerPoint)
+        {
+            Ellipse colorWheelEllipse = this.FindName("ColorWheelCircle") as Ellipse;
+
+            colorWheelEllipse.Margin = new Thickness(
+                pointerPoint.Position.X - colorWheelEllipse.Width / 2,
+                pointerPoint.Position.Y - colorWheelEllipse.Height / 2,
+                0,
+                0);
+        }
+
         /// <summary>
         /// Moves the Color Wheel circle to the selected location and sets the Fill color.
         /// </summary>
@@ -551,7 +562,7 @@ namespace Hashboard
             PointerPoint pointerPointFromParent = e.GetCurrentPoint(grid as UIElement);
 
             // Sending a color-change on drag overloads Home Assistant so disable this
-            UpdateColorWheel(sender as Line, pointerPointFromLine.Position, pointerPointFromParent.Position, grid.Margin);
+            SetColorWheelCircleLocationAndSendColorUpdate(sender as Line, pointerPointFromLine.Position, pointerPointFromParent.Position, grid.Margin);
         }
 
         /// <summary>
@@ -566,7 +577,7 @@ namespace Hashboard
             Point pointFromLine = e.GetPosition(sender as UIElement);
             Point pointFromGrid = e.GetPosition(grid as UIElement);
 
-            UpdateColorWheel(sender as Line, pointFromLine, pointFromGrid, grid.Margin);
+            SetColorWheelCircleLocationAndSendColorUpdate(sender as Line, pointFromLine, pointFromGrid, grid.Margin);
         }
 
         /// <summary>
@@ -579,6 +590,8 @@ namespace Hashboard
             if (PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.Color, ChildrenEntities))
             {
                 ShowColorWheelCircle(Visibility.Collapsed);
+
+                PlaceColorWheelCircle(e.GetCurrentPoint(sender as UIElement));
             }
         }
 
@@ -592,9 +605,11 @@ namespace Hashboard
             if (PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.Color, ChildrenEntities))
             {
                 ShowColorWheelCircle(Visibility.Visible);
+
+                PlaceColorWheelCircle(e.GetCurrentPoint(sender as UIElement));
             }
         }
-
+        
         /// <summary>
         /// Shows the Color Wheel circle and hides the Color Temperature circle.
         /// </summary>

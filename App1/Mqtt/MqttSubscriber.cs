@@ -31,12 +31,11 @@ namespace HashBoard
             { 255, string.Empty },
         };
 
-        public bool IsSubscribed{ get; set; } 
+        public bool IsSubscribed{ get { return client != null && client.IsConnected; } } 
         public string Status { get; set; }
 
         public MqttSubscriber()
         {
-            IsSubscribed = false;
             Status = "No connection has been attempted.";
         }
 
@@ -48,7 +47,7 @@ namespace HashBoard
         {
             if (IsSubscribed)
             {
-                throw new ArgumentException("Client is already subscribed.");
+                return;
             }
 
             EntityUpdatedCallback = onEntityUpdatedCallback;
@@ -68,8 +67,6 @@ namespace HashBoard
                     if (response == 0)
                     {
                         client.Subscribe(new string[] { SettingsControl.MqttStateStream }, new byte[] { 2 });
-
-                        IsSubscribed = true;
                     }
 
                     Status = ConnackResponseCodes[response];
@@ -93,8 +90,6 @@ namespace HashBoard
             if (IsSubscribed)
             {
                 client.Disconnect();
-
-                IsSubscribed = false;
             }
         }
 

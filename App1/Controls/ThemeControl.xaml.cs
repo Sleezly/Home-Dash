@@ -25,8 +25,9 @@ namespace Hashboard
             "Light",
         };
 
-        private readonly List<string> ColorChoices = new List<string>()
+        private static readonly List<string> ColorChoices = new List<string>()
         {
+            "System Theme",
             "Navy",
             "MidnightBlue",
             "SlateGray",
@@ -160,6 +161,19 @@ namespace Hashboard
         }
 
         /// <summary>
+        /// Gets's the default Windows accent system theme color.
+        /// </summary>
+        /// <returns></returns>
+        private static SolidColorBrush GetSystemThemeBrush()
+        {
+            SolidColorBrush systemAccentBrush = Application.Current.Resources["SystemControlHighlightAccentBrush"] as SolidColorBrush;
+
+            // Create a new brush for each instance since if a shared instance is returned, any opacity modifications applied to this
+            // brush would apply to all other elelements which use this brush as well.
+            return new SolidColorBrush(Windows.UI.Color.FromArgb(systemAccentBrush.Color.A, systemAccentBrush.Color.R, systemAccentBrush.Color.G, systemAccentBrush.Color.B));
+        }
+
+        /// <summary>
         /// Theme Style.
         /// </summary>
         public static string ApplicationTheme
@@ -183,12 +197,22 @@ namespace Hashboard
             {
                 if (null != localSettings.Values["AccentColorBrush"])
                 {
-                    System.Drawing.Color color = System.Drawing.Color.FromName(localSettings.Values["AccentColorBrush"] as string);
-                    return new SolidColorBrush(Windows.UI.Color.FromArgb(color.A, color.R, color.G, color.B));
+                    string colorSettingsText = localSettings.Values["AccentColorBrush"] as string;
+
+                    if (colorSettingsText.Equals(ThemeControl.ColorChoices[0]))
+                    {
+                        // User override to use Windows Accent color as specified in system theme color
+                        return GetSystemThemeBrush();
+                    }
+                    else
+                    {
+                        System.Drawing.Color color = System.Drawing.Color.FromName(colorSettingsText);
+                        return new SolidColorBrush(Windows.UI.Color.FromArgb(color.A, color.R, color.G, color.B));
+                    }
                 }
                 else
                 {
-                    return new SolidColorBrush(Windows.UI.Color.FromArgb(255, Windows.UI.Colors.RoyalBlue.R, Windows.UI.Colors.RoyalBlue.G, Windows.UI.Colors.RoyalBlue.B));
+                    return GetSystemThemeBrush();
                 }
             }
         }

@@ -141,6 +141,7 @@
     <None Include="App1_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets\Media\media-repeat.png" />
     <Content Include="Assets\panel-paintbrush.png" />
     <Content Include="Assets\panel-settings.png" />
     <Content Include="Assets\Weather\weather-lightning-rainy.png" />

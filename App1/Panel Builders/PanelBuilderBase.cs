@@ -22,7 +22,7 @@ namespace HashBoard
 
         public const double StateIsOffOpacity = 0.3;
 
-        protected Color NoninteractiveBrushColor = Colors.Black;
+        private Color NoninteractiveBrushColor = Colors.Black;
 
         protected SolidColorBrush FontColorBrush = new SolidColorBrush(Colors.White);
 
@@ -88,7 +88,8 @@ namespace HashBoard
 
             if (panel.Background == null)
             {
-                if (TapEventHandler == null)
+                // Non-interactive panels should have no color
+                if (TapEventHandler == null && HoldEventHandler == null)
                 {
                     panel.Background = new SolidColorBrush(NoninteractiveBrushColor);
                 }
@@ -98,7 +99,8 @@ namespace HashBoard
                 }
             }
 
-            if (entity.IsInOffState())
+            // Panels which are "off" and are interactive should have higher transparency
+            if (entity.IsInOffState() && (TapEventHandler != null || HoldEventHandler != null))
             {
                 panel.Background.Opacity = StateIsOffOpacity;
             }

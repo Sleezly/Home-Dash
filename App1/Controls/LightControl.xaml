@@ -8,7 +8,7 @@
 
     <StackPanel x:Name="RootPanel" Orientation="Vertical" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="4">
         <TextBlock x:Name="DeviceText" HorizontalAlignment="Center" Text="DEVICE" FontSize="22" FontWeight="Bold"/>
-        <Grid PointerPressed="ColorWheelGrid_PointerPressed" PointerReleased="ColorWheelGrid_PointerReleased" PointerExited="ColorWheelGrid_PointerExited">
+        <Grid PointerPressed="ColorWheelGrid_PointerPressed" PointerReleased="ColorWheelGrid_PointerReleased">
             <Grid x:Name="ColorWheel" Margin="0,12,0,12" Width="280" Height="280"/>
             <Ellipse x:Name="ColorWheelCircle" Width="24" Height="24" Stroke="{ThemeResource DefaultTextForegroundThemeBrush}" Fill="Transparent" StrokeThickness="2" HorizontalAlignment="Left" VerticalAlignment="Top"/>
         </Grid>

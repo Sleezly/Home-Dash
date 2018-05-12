@@ -4,29 +4,34 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:HashBoard"
     Width="300"
-    Height="574">
+    Height="606">
 
     <StackPanel x:Name="RootPanel" Orientation="Vertical" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="4">
         <TextBlock x:Name="DeviceText" HorizontalAlignment="Center" Text="DEVICE" FontSize="22" FontWeight="Bold"/>
         <Image x:Name="MediaImage" Width="300" Height="300" Source="{Binding MyBitmapImage}" Margin="0,4,0,0" />
         <TextBlock x:Name="ArtistText" HorizontalAlignment="Center" Text="ARTIST" FontSize="24" Padding="6"/>
-        <TextBlock x:Name="TrackText" HorizontalAlignment="Center" Text="TRACT" FontSize="16" Padding="6"/>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-            <BitmapIcon x:Name="ButtonPrevious" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" UriSource="ms-appx:///Assets/media/media-skip-previous.png" Width="48" Height="48" Tag="media_previous_track" Tapped="BitmapIcon_Tapped" PointerPressed="ButtonPrevious_PointerPressed" PointerExited="ButtonPrevious_PointerExited"/>
-            <BitmapIcon x:Name="ButtonPlay" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" UriSource="ms-appx:///Assets/media/media-play.png" Width="56" Height="56" Tapped="BitmapIcon_Tapped" PointerPressed="ButtonPrevious_PointerPressed" PointerExited="ButtonPrevious_PointerExited"/>
-            <BitmapIcon x:Name="ButtonNext" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" UriSource="ms-appx:///Assets/media/media-skip-next.png" Width="48" Height="48" Tag="media_next_track" Tapped="BitmapIcon_Tapped" PointerPressed="ButtonPrevious_PointerPressed" PointerExited="ButtonPrevious_PointerExited"/>
+        <TextBlock x:Name="TrackText" HorizontalAlignment="Center" Text="TRACK" FontSize="16" Padding="6"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="6">
+            <!--<BitmapIcon x:Name="ButtonShuffle" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" UriSource="ms-appx:///Assets/media/media-shuffle.png" Width="36" Height="36" Margin="6" Tag="media_shuffle_set" Tapped="BitmapIcon_Tapped" PointerPressed="ButtonPrevious_PointerPressed" PointerExited="ButtonPrevious_PointerExited"/>-->
+            <BitmapIcon x:Name="ButtonPrevious" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" UriSource="ms-appx:///Assets/media/media-skip-previous.png" Width="56" Height="56" Tag="media_previous_track"/>
+            <Grid>
+                <BitmapIcon x:Name="ButtonPlay" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" UriSource="ms-appx:///Assets/media/media-play.png" Width="56" Height="56" Tag="media_play_pause"/>
+                <Ellipse x:Name="EllipsePlay" Stroke="{ThemeResource DefaultTextForegroundThemeBrush}" StrokeThickness="3" Width="68" Height="68" Tag="media_play_pause" />
+            </Grid>
+            <BitmapIcon x:Name="ButtonNext" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" UriSource="ms-appx:///Assets/media/media-skip-next.png" Width="56" Height="56"  Tag="media_next_track"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Padding="6">
-            <BitmapIcon x:Name="ButtonVolumeDown" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" Margin="0,0,4,0" UriSource="ms-appx:///Assets/media/volume-low.png" Width="36" Height="36" Tag="volume_down" Tapped="BitmapIcon_Tapped" PointerPressed="ButtonPrevious_PointerPressed" PointerExited="ButtonPrevious_PointerExited"/>
-            <Grid HorizontalAlignment="Center" Width="200">
-                <Line x:Name="ScobblerProgress2" X1="0" X2="192" Y1="18" Y2="18" StrokeThickness="6" Stroke="LightGray" />
+            <BitmapIcon x:Name="ButtonPower" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" UriSource="ms-appx:///Assets/buttons/power.png" Tag="toggle" Width="48" Height="48"/>
+            <BitmapIcon x:Name="ButtonVolumeDown" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" Margin="0,0,4,0" UriSource="ms-appx:///Assets/media/volume-low.png" Width="36" Height="36" Tag="volume_down"/>
+            <Grid Width="150" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Line x:Name="ScobblerProgress2" X1="0" X2="145" Y1="18" Y2="18" StrokeThickness="6" Stroke="{ThemeResource DefaultTextForegroundThemeBrush}" />
                 <Line x:Name="ScobblerProgress1" X1="0" X2="50" Y1="18" Y2="18" StrokeThickness="8" Stroke="{ThemeResource SystemControlForegroundAccentBrush}"/>
-                <Line x:Name="ScobblerLine" X1="0" X2="200" Y1="18" Y2="18" StrokeThickness="36" Stroke="Transparent" PointerPressed="Grid_PointerPressed" PointerMoved="Grid_PointerMoved" PointerReleased="Grid_PointerReleased"/>
+                <Line x:Name="ScobblerLine" X1="0" X2="145" Y1="18" Y2="18" StrokeThickness="36" Stroke="Transparent" Tapped="ScobblerLine_Tapped" PointerReleased="Grid_PointerReleased"/>
             </Grid>
-            <BitmapIcon x:Name="ButtonVolumeUp" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" Margin="4,0,0,0" UriSource="ms-appx:///Assets/media/volume-high.png" Width="36" Height="36" Tag="volume_up" Tapped="BitmapIcon_Tapped" PointerPressed="ButtonPrevious_PointerPressed" PointerExited="ButtonPrevious_PointerExited"/>
+            <BitmapIcon x:Name="ButtonVolumeUp" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" Margin="4,0,0,0" UriSource="ms-appx:///Assets/media/volume-high.png" Width="36" Height="36" Tag="volume_up"/>
         </StackPanel>
         <Grid Padding="6">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="16" Margin="8,0,0,0">SOURCE SELECT</TextBlock>
+            <TextBlock x:Name="SourceSelectTextBlock" HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="16" Margin="8,0,0,0">SOURCE SELECT</TextBlock>
             <ComboBox x:Name="SourceComboBox" HorizontalAlignment="Right" VerticalAlignment="Center" Width="140" />
         </Grid>
     </StackPanel>
