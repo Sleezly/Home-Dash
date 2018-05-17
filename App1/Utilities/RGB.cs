@@ -52,14 +52,6 @@ namespace HashBoard
 
             return new RGB(Convert.ToByte(r), Convert.ToByte(g), Convert.ToByte(b));
         }
-        //public static RGB GetLinearBlendedColor(double percentage, Color left, Color right)
-        //{
-        //    double r = ((left.R + right.R) / 2) * (1.0 - percentage);
-        //    double g = ((left.G + right.G) / 2) * (1.0 - percentage);
-        //    double b = ((left.B + right.B) / 2) * (1.0 - percentage);
-
-        //    return new RGB(Convert.ToByte(r), Convert.ToByte(g), Convert.ToByte(b));
-        //}
 
         public SolidColorBrush CreateSolidColorBrush()
         {

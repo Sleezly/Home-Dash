@@ -71,7 +71,6 @@ namespace Hashboard
                 // is disabled, also add a gray-tone to the colors.
                 if (PanelEntity.HasSupportedFeatures((uint)LightPlatformSupportedFeatures.Color, ChildrenEntities))
                 {
-                    line.Tapped += ColorWheelLine_Tapped;
                     line.PointerReleased += ColorWheelLine_PointerReleased;
 
                     lgb.GradientStops.Add(new GradientStop() { Color = Colors.White });
@@ -235,7 +234,7 @@ namespace Hashboard
         /// Updates the Color Wheel based on input from color source.
         /// </summary>
         /// <param name="rgb"></param>
-        private void SetColorWheelLocation(RGB rgb)
+        private HSV SetColorWheelLocation(RGB rgb)
         {
             Grid grid = this.FindName("ColorWheel") as Grid;
             Ellipse ellipse = this.FindName("ColorWheelCircle") as Ellipse;
@@ -257,6 +256,8 @@ namespace Hashboard
                 y + grid.Height / 2,
                 0,
                 0);
+
+            return hsv;
         }
 
         /// <summary>
@@ -282,10 +283,10 @@ namespace Hashboard
 
             // Use the same calculation to place the circle via-RGB as we do for cursor placement as this guarantees
             // both methods to place the ellipse generate the same result.
-            SetColorWheelLocation(rgb);
+            HSV hsv = SetColorWheelLocation(rgb);
 
-            // Send the RGB update via REST API
-            SendColorUpdate(CurrentColor);
+            // Send the HSV update via REST API
+            SendColorUpdate(hsv);
         }
 
         /// <summary>
@@ -338,6 +339,33 @@ namespace Hashboard
                     new Dictionary<string, string>() {
                         { "entity_id", PanelEntity.EntityId.ToString() },
                         { "color_temp", Convert.ToInt32(colorTemperature).ToString() },
+                    });
+            }
+        }
+
+        /// <summary>
+        /// Sends a web request with desired new HSV color value.
+        /// </summary>
+        /// <param name="HSV"></param>
+        private void SendColorUpdate(HSV hsv)
+        {
+            if (ChildrenEntities != null)
+            {
+                WebRequests.SendAction(
+                    "turn_on",
+                    ChildrenEntities.Select(x => x.EntityId),
+                    new Dictionary<string, string>() {
+                        { "hs_color", $"[{(int)hsv.H},{(int)(hsv.S*100)}]" }
+                    });
+            }
+            else
+            {
+                WebRequests.SendAction(
+                    "light",
+                    "turn_on",
+                    new Dictionary<string, string>() {
+                        { "entity_id", PanelEntity.EntityId.ToString() },
+                        { "hs_color", $"[{(int)hsv.H},{(int)(hsv.S*100)}]" }
                     });
             }
         }
@@ -561,25 +589,9 @@ namespace Hashboard
             PointerPoint pointerPointFromLine = e.GetCurrentPoint(sender as UIElement);
             PointerPoint pointerPointFromParent = e.GetCurrentPoint(grid as UIElement);
 
-            // Sending a color-change on drag overloads Home Assistant so disable this
             SetColorWheelCircleLocationAndSendColorUpdate(sender as Line, pointerPointFromLine.Position, pointerPointFromParent.Position, grid.Margin);
         }
-
-        /// <summary>
-        /// Moves the Color Wheel circle to the selected location and sets the Fill color.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void ColorWheelLine_Tapped(object sender, TappedRoutedEventArgs e)
-        {
-            Grid grid = this.FindName("ColorWheel") as Grid;
-
-            Point pointFromLine = e.GetPosition(sender as UIElement);
-            Point pointFromGrid = e.GetPosition(grid as UIElement);
-
-            SetColorWheelCircleLocationAndSendColorUpdate(sender as Line, pointFromLine, pointFromGrid, grid.Margin);
-        }
-
+        
         /// <summary>
         /// Hides the Color Wheel circle.
         /// </summary>

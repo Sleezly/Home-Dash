@@ -49,7 +49,8 @@ namespace HashBoard
         /// <summary>
         /// Polling thread cancellation token
         /// </summary>
-        private CancellationTokenSource PollingThreadCancellationToken;
+        private CancellationTokenSource PollingThreadQuitCancellationToken;
+        private CancellationTokenSource PollingThreadResetTimerCancellationToken;
 
         /// <summary>
         /// MQTT subscriber and worker cancellation tokens for event driven work requests
@@ -104,7 +105,44 @@ namespace HashBoard
 
             this.RequestedTheme = ThemeControl.GetApplicationTheme();
 
+            Application.Current.Suspending += App_Suspending;
+            Application.Current.Resuming += App_Resuming;
+
             LoadCustomEntityHandler();
+
+            StartPollingThread();
+
+            StartMqttSubscriber();
+        }
+
+        /// <summary>
+        /// Resuming
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void App_Resuming(object sender, object e)
+        {
+            Debug.WriteLine($"{nameof(App_Resuming)} starting any additional threads for Resume.");
+
+            StartPollingThread();
+
+            StartMqttSubscriber();
+        }
+
+        /// <summary>
+        /// Suspending
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void App_Suspending(object sender, Windows.ApplicationModel.SuspendingEventArgs e)
+        {
+            Debug.WriteLine($"{nameof(App_Suspending)} stopping all threads to prepare for Suspend.");
+
+            PollingThreadQuitCancellationToken?.Cancel();
+            PollingThreadResetTimerCancellationToken?.Cancel();
+
+            EntityUpdateRequestedQuitCancellationToken?.Cancel();
+            EntityUpdateRequestedWakeupCancellationToken?.Cancel();
         }
 
         /// <summary>
@@ -134,10 +172,6 @@ namespace HashBoard
             }
 
             await LoadFrame();
-
-            StartPollingThread();
-
-            StartMqttSubscriber();
         }
 
         /// <summary>
@@ -373,11 +407,11 @@ namespace HashBoard
         {
             if (SettingsControl.HomeAssistantPollingInterval == default(TimeSpan))
             {
-                if (PollingThreadCancellationToken != null)
+                if (PollingThreadQuitCancellationToken != null)
                 {
                     Debug.WriteLine($"{nameof(StartPollingThread)} stopping polling thread as polling interval is set to zero.");
 
-                    PollingThreadCancellationToken.Cancel();
+                    PollingThreadQuitCancellationToken.Cancel();
                 }
                 else
                 {
@@ -386,9 +420,16 @@ namespace HashBoard
             }
             else
             {
-                // Kick off the entity updater thread to keep the data in sync
-                PollingThreadCancellationToken = new CancellationTokenSource();
-                Task.Factory.StartNew(PeriodicEntityUpdatePollingThread, PollingThreadCancellationToken.Token);
+                if (PollingThreadQuitCancellationToken != null)
+                {
+                    Debug.WriteLine($"{nameof(StartPollingThread)} polling thread is already one active.");
+                }
+                else
+                {
+                    // Kick off the polling thread
+                    PollingThreadQuitCancellationToken = new CancellationTokenSource();
+                    Task.Factory.StartNew(PeriodicEntityUpdatePollingThread, PollingThreadQuitCancellationToken.Token);
+                }
             }
         }
 
@@ -415,30 +456,39 @@ namespace HashBoard
 
             mqttSubscriber.Connect(OnEntityUpdated, OnMqttBrokerConnectionResult);
 
-            EntityUpdateRequestedQuitCancellationToken = new CancellationTokenSource();
-
-            Task.Factory.StartNew(MqttEntityUpdateRequestedResponseThread, EntityUpdateRequestedQuitCancellationToken.Token);
-
-            Debug.WriteLine($"{nameof(StartMqttSubscriber)} connecting to MQTT.");
+            Debug.WriteLine($"{nameof(StartMqttSubscriber)} attempting to connect to MQTT broker.");
         }
 
         /// <summary>
         /// Handle MQTT Broker connection attmpts with failure message prompts for the user.
         /// </summary>
         /// <param name="connectionResponse"></param>
-        private void OnMqttBrokerConnectionResult(byte connectionResponse)
+        private async void OnMqttBrokerConnectionResult(byte connectionResponse)
         {
-            if (connectionResponse != 0)
+            switch (connectionResponse)
             {
-                ShowErrorDialog("MQTT Broker", $"Failed to connect to MQTT broker '{SettingsControl.MqttBrokerHostname}'. " +
-                    $"Got MQTT response code: {connectionResponse}. {mqttSubscriber.Status}");
+                case MqttSubscriber.MqttConnectionSuccess:
+                    Debug.WriteLine($"{nameof(StartMqttSubscriber)} successfully subscribed to MQTT brodker '{SettingsControl.MqttBrokerHostname}'.");
 
-                EntityUpdateRequestedQuitCancellationToken?.Cancel();
-                EntityUpdateRequestedWakeupCancellationToken?.Cancel();
-            }
-            else
-            {
-                Debug.WriteLine($"{nameof(StartMqttSubscriber)} successfully subscribed to MQTT brodker '{SettingsControl.MqttBrokerHostname}'.");
+                    // Connected successfully. Start the MQTT response receiver thread which will process the MQTT events.
+                    EntityUpdateRequestedQuitCancellationToken = new CancellationTokenSource();
+                    await Task.Factory.StartNew(MqttEntityUpdateRequestedResponseThread, EntityUpdateRequestedQuitCancellationToken.Token);
+                    break;
+
+                case MqttSubscriber.MqttConnectionException:
+                    Debug.WriteLine($"{nameof(StartMqttSubscriber)} encountered exception while attempting to connect to '{SettingsControl.MqttBrokerHostname}'. Retrying.");
+
+                    // Failed to connect. This typically means we (the client) were not yet ready to start the subscriber or did not cleanup a previous connection
+                    // after a suspend/resume sequence of events. So, wait a little bit and try again. Ugh.
+                    await Task.Delay(100);
+                    StartMqttSubscriber();
+                    break;
+
+                default:
+                    // Standard MQTT error, such as bad user name/password or invalid broker IP address. Inform user.
+                    ShowErrorDialog("MQTT Broker", $"Failed to connect to MQTT broker '{SettingsControl.MqttBrokerHostname}'. " +
+                        $"Got MQTT response code: {connectionResponse}. {mqttSubscriber.Status}");
+                    break;
             }
         }
 
@@ -759,6 +809,9 @@ namespace HashBoard
                 // Sleep until the event token is signaled
                 EntityUpdateRequestedWakeupCancellationToken.Token.WaitHandle.WaitOne();
 
+                // Reset the polling thread timer if it's active
+                PollingThreadResetTimerCancellationToken?.Cancel();
+
                 // Allow for additional MQTT messages to be received before proceeding since it's likely there will be multiple entities
                 // requesting an update at the same time.
                 await Task.Delay(100);
@@ -773,19 +826,24 @@ namespace HashBoard
                 }
             }
 
+            // Terminating so disconnect from MQTT as well
+            if (mqttSubscriber.IsSubscribed)
+            {
+                mqttSubscriber.Disconnect();
+            }
+
             Debug.WriteLine($"{nameof(MqttEntityUpdateRequestedResponseThread)} is now terminating.");
         }
 
         /// <summary>
         /// Polling thread. Updates all entity panels with updated state information after querying
-        /// Home Assistant for all entities.
+        /// Home Assistant for all entities. Also reconnects to the MQTT broker if it was disconnected.
         /// </summary>
-        /// <param name="cancellationToken"></param>
         private async void PeriodicEntityUpdatePollingThread()
         {
             Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} is starting.");
 
-            if (PollingThreadCancellationToken == null)
+            if (PollingThreadQuitCancellationToken == null)
             {
                 throw new ArgumentException($"{nameof(PeriodicEntityUpdatePollingThread)} cancellation token was not set by caller.");
             }
@@ -793,18 +851,49 @@ namespace HashBoard
             DateTime lastUpdatedTime = DateTime.Now;
 
             // Infinite loop until told to stop
-            while (!PollingThreadCancellationToken.IsCancellationRequested)
+            while (!PollingThreadQuitCancellationToken.IsCancellationRequested)
             {
                 Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} now sleeping.");
 
-                await Task.Delay(SettingsControl.HomeAssistantPollingInterval, PollingThreadCancellationToken.Token).ContinueWith(tsk => { });
+                // Allow for the polling wait timer to be reset when the timer cancellation token is set
+                do
+                {
+                    if (PollingThreadResetTimerCancellationToken == null || PollingThreadResetTimerCancellationToken.IsCancellationRequested)
+                    {
+                        PollingThreadResetTimerCancellationToken = new CancellationTokenSource();
+                    }
+
+                    await Task.Delay(SettingsControl.HomeAssistantPollingInterval, PollingThreadResetTimerCancellationToken.Token).ContinueWith(tsk => { });
+
+                // Reset the polling thread wait timer when requested
+                } while (PollingThreadResetTimerCancellationToken.IsCancellationRequested);
 
                 Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} is awake. Now processing.");
 
                 lastUpdatedTime = await UpdateEntitiesSinceLastUpdate(lastUpdatedTime);
+
+                // Make sure our MQTT broker is connected if expected
+                ResubscribeToMqttBrokerIfNeeded();
             }
 
             Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} now terminating.");
+        }
+
+        /// <summary>
+        /// Checks if we are still subscribed to MQTT topic and if not, attempt to reconnect.
+        /// </summary>
+        private void ResubscribeToMqttBrokerIfNeeded()
+        {
+            // Make sure our MQTT broker is connected if expected
+            if (!string.IsNullOrEmpty(SettingsControl.MqttBrokerHostname))
+            {
+                if (!mqttSubscriber.IsSubscribed)
+                {
+                    Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} found unexpected MQTT disconnect. Attempting to reconnect.");
+                    ShowErrorDialog("ResubscribeToMqttBrokerIfNeeded", "hollar!");
+                    StartMqttSubscriber();
+                }
+            }
         }
 
         /// <summary>
@@ -850,11 +939,7 @@ namespace HashBoard
             }
             catch (Exception)
             {
-                ShowErrorDialog("Connection Failure", $"Failed to connect to Home Assistant. URI attempted: {SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/states?apiPassword=[xxx].");
-
-                PollingThreadCancellationToken?.Cancel();
-                EntityUpdateRequestedQuitCancellationToken?.Cancel();
-                EntityUpdateRequestedWakeupCancellationToken?.Cancel();
+                ShowErrorDialog("Connection Failure", $"Failed to connect to Home Assistant. URI attempted: {SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/states?apiPassword=[xxx]. Time {DateTime.Now.ToShortTimeString()}");
             }
 
             return null;

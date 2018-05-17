@@ -22,14 +22,17 @@ namespace HashBoard
 
         private Dictionary<byte, string> ConnackResponseCodes = new Dictionary<byte, string>()
         {
-            { 0, "Connection accepted." },
+            { MqttConnectionSuccess, "Connection accepted." },
             { 1, "The Server does not support the level of the MQTT protocol requested by the Client." },
             { 2, "The Client identifier is correct UTF-8 but not allowed by the Server." },
             { 3, "The Network Connection has been made but the MQTT service is unavailable." },
             { 4, "The data in the user name or password is malformed." },
             { 5, "The Client is not authorized to connect." },
-            { 255, string.Empty },
+            { MqttConnectionException, string.Empty },
         };
+
+        public const byte MqttConnectionSuccess = 0;
+        public const byte MqttConnectionException = 255;
 
         public bool IsSubscribed{ get { return client != null && client.IsConnected; } } 
         public string Status { get; set; }
@@ -73,7 +76,7 @@ namespace HashBoard
                 }
                 catch (Exception e)
                 {
-                    Status = e.Message;
+                    Status = e.InnerException.ToString();
                 }
                 finally
                 { 
