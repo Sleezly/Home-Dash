@@ -120,9 +120,12 @@ namespace HashBoard
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void App_Resuming(object sender, object e)
+        private async void App_Resuming(object sender, object e)
         {
             Debug.WriteLine($"{nameof(App_Resuming)} starting any additional threads for Resume.");
+
+            // Force an update of all entities immediately to ensure all panels have up-to-date state data
+            await UpdateEntitiesSinceLastUpdate(default(DateTime));
 
             StartPollingThread();
 
@@ -860,7 +863,12 @@ namespace HashBoard
                 {
                     if (PollingThreadResetTimerCancellationToken == null || PollingThreadResetTimerCancellationToken.IsCancellationRequested)
                     {
+                        // Polling timer has been reset so create a new cancellation token so we may be reset again if requested
                         PollingThreadResetTimerCancellationToken = new CancellationTokenSource();
+
+                        // TODO: need to adjust lastUpdateTime to the DateTime of most recent entity modification time.
+                        // Cannot use DateTime.Now since this could result in a gap. Could make lastUpdateTime as a global but the use-case here
+                        // seems minimal so simply leave lastUpdateTime alone and update too many panels if both MQTT and Polling thread are active.
                     }
 
                     await Task.Delay(SettingsControl.HomeAssistantPollingInterval, PollingThreadResetTimerCancellationToken.Token).ContinueWith(tsk => { });
@@ -871,29 +879,9 @@ namespace HashBoard
                 Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} is awake. Now processing.");
 
                 lastUpdatedTime = await UpdateEntitiesSinceLastUpdate(lastUpdatedTime);
-
-                // Make sure our MQTT broker is connected if expected
-                ResubscribeToMqttBrokerIfNeeded();
             }
 
             Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} now terminating.");
-        }
-
-        /// <summary>
-        /// Checks if we are still subscribed to MQTT topic and if not, attempt to reconnect.
-        /// </summary>
-        private void ResubscribeToMqttBrokerIfNeeded()
-        {
-            // Make sure our MQTT broker is connected if expected
-            if (!string.IsNullOrEmpty(SettingsControl.MqttBrokerHostname))
-            {
-                if (!mqttSubscriber.IsSubscribed)
-                {
-                    Debug.WriteLine($"{nameof(PeriodicEntityUpdatePollingThread)} found unexpected MQTT disconnect. Attempting to reconnect.");
-                    ShowErrorDialog("ResubscribeToMqttBrokerIfNeeded", "hollar!");
-                    StartMqttSubscriber();
-                }
-            }
         }
 
         /// <summary>
@@ -933,6 +921,14 @@ namespace HashBoard
         {
             try
             {
+                int attempt = 0;
+                while (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable() && attempt < 5)
+                {
+                    Debug.WriteLine($"{nameof(GetStateData)} no network connection availalbe. Attempt [{attempt}]. Time {DateTime.Now}");
+
+                    await Task.Delay(100 + (attempt * 250));
+                }
+
                 Task<List<Entity>> task = WebRequests.GetData<List<Entity>>("api/states");
 
                 return await task;
