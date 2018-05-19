@@ -36,16 +36,6 @@ namespace Hashboard
                 PasswordBox homeAssistantPassword = this.FindName("HomeAssistantPasswordText") as PasswordBox;
                 homeAssistantPassword.Password = HomeAssistantPassword;
             }
-            if (null != HomeAssistantPollingInterval)
-            {
-                TextBox homeAssistantPollingInterval = this.FindName("PollingIntervalText") as TextBox;
-                homeAssistantPollingInterval.Text = HomeAssistantPollingInterval.TotalSeconds.ToString();
-
-                if (HomeAssistantPollingInterval == default(TimeSpan))
-                {
-                    homeAssistantPollingInterval.Text += " (zero for disabled)";
-                }
-            }
             if (null != MqttBrokerHostname)
             {
                 TextBox mqttBrokerHostname = this.FindName("MqttBrokerHostnameText") as TextBox;
@@ -68,17 +58,30 @@ namespace Hashboard
             }
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Saves the user settings.
+        /// </summary>
+        public bool SaveSettings()
         {
+            bool settingsChanged = false;
+
             TextBox homeAssistantProtocol = this.FindName("HomeAssistantProtocolText") as TextBox;
             TextBox homeAssistantHostname = this.FindName("HomeAssistantHostnameText") as TextBox;
             TextBox homeAssistantPort = this.FindName("HomeAssistantPortText") as TextBox;
             PasswordBox homeAssistantPassword = this.FindName("HomeAssistantPasswordText") as PasswordBox;
-            TextBox pollingInterval = this.FindName("PollingIntervalText") as TextBox;
             TextBox mqttBrokerHostname = this.FindName("MqttBrokerHostnameText") as TextBox;
             TextBox mqttUsername = this.FindName("MqttUsernameText") as TextBox;
             PasswordBox mqttPassword = this.FindName("MqttPasswordText") as PasswordBox;
             TextBox mqttStateStream = this.FindName("MqttStateStreamText") as TextBox;
+
+            settingsChanged |= (HttpProtocol != homeAssistantProtocol.Text);
+            settingsChanged |= (HomeAssistantHostname != homeAssistantHostname.Text);
+            settingsChanged |= (HomeAssistantPort != homeAssistantPort.Text);
+            settingsChanged |= (HomeAssistantPassword != homeAssistantPassword.Password);
+            settingsChanged |= (MqttBrokerHostname != mqttBrokerHostname.Text);
+            settingsChanged |= (MqttUsername != mqttUsername.Text);
+            settingsChanged |= (MqttPassword != mqttPassword.Password);
+            settingsChanged |= (MqttStateStream != mqttStateStream.Text);
 
             HttpProtocol = homeAssistantProtocol.Text;
             HomeAssistantHostname = homeAssistantHostname.Text;
@@ -89,14 +92,7 @@ namespace Hashboard
             MqttPassword = mqttPassword.Password;
             MqttStateStream = mqttStateStream.Text;
 
-            if (Int32.TryParse(pollingInterval.Text, out int interval))
-            {
-                HomeAssistantPollingInterval = TimeSpan.FromSeconds(Math.Max(0, interval));
-            }
-            else
-            {
-                HomeAssistantPollingInterval = default(TimeSpan);                
-            }
+            return settingsChanged;
         }
         
         /// <summary>
@@ -160,24 +156,13 @@ namespace Hashboard
         }
 
         /// <summary>
-        /// Frequency to request state data from Home Assistant.
+        /// Frequency to check health of MQTT subscription connectivity.
         /// </summary>
         public static TimeSpan HomeAssistantPollingInterval
         {
             get
             {
-                if (localSettings.Values.ContainsKey("HomeAssistantPollingInterval"))
-                {
-                    return TimeSpan.FromSeconds((double)localSettings.Values["HomeAssistantPollingInterval"]);
-                }
-                else
-                {
-                    return default(TimeSpan);
-                }
-            }
-            private set
-            {
-                localSettings.Values["HomeAssistantPollingInterval"] = value.TotalSeconds;
+                return TimeSpan.FromSeconds(123);
             }
         }
 

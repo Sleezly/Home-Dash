@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:HashBoard"
     Width="460"
-    Height="500"
+    Height="386"
     RequestedTheme="Default">
 
     <StackPanel x:Name="RootPanel" Orientation="Vertical" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="4">
@@ -28,11 +28,7 @@
             <PasswordBox x:Name="HomeAssistantPasswordText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Password=""></PasswordBox>
         </Grid>
         <Grid Padding="4">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">POLLING INTERVAL (seconds)</TextBlock>
-            <TextBox x:Name="PollingIntervalText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="0 (zero for disabled)"></TextBox>
-        </Grid>
-        <Grid Padding="4">
-            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold">HOME ASSISTANT STATESTREAM via MQTT SUBSCRIPTION</TextBlock>
+            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold">HOME ASSISTANT STATESTREAM via MQTT</TextBlock>
         </Grid>
         <Grid Padding="4">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">BROKER HOSTNAME</TextBlock>
@@ -49,9 +45,6 @@
         <Grid Padding="4">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">STATE STREAM TOPIC</TextBlock>
             <TextBox Name="MqttStateStreamText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="homeassistant/#"></TextBox>
-        </Grid>
-        <Grid Padding="24">
-            <Button x:Name="ButtonOk" HorizontalAlignment="Center" Padding="8" Width="144" Click="Button_Click">Save</Button>
         </Grid>
     </StackPanel>
 </UserControl>
