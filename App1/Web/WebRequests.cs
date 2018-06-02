@@ -14,19 +14,57 @@ namespace HashBoard
     {
         private const string ApiPassword = "api_password";
 
-        public static async Task<T> GetData<T>(string apiAction)
+        public static async Task WaitForNetworkAvailable()
         {
+            const uint maxRetries = 5;
+
+            // Wait for network connection to be available
+            int attempt = 0;
+            while (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable() && attempt < maxRetries)
+            {
+                Debug.WriteLine($"{nameof(GetData)} no network connection availalbe. Attempt [{attempt}]. Time {DateTime.Now}.");
+
+                await Task.Delay(100 + (attempt * 250));
+
+                attempt++;
+            }
+        }
+
+        public static async Task<List<Entity>> GetData()
+        {
+            const string apiAction = @"api/states";
+            const uint maxRetries = 5;
+
             Uri uri = new Uri($"{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/{apiAction}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
 
-            HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(uri);
-            var response = (HttpWebResponse)await Task.Factory.FromAsync<WebResponse>(request.BeginGetResponse, request.EndGetResponse, null);
+            await WaitForNetworkAvailable();
 
-            Stream stream = response.GetResponseStream();
+            int attempt = 0;
+            while (attempt < maxRetries)
+            {
+                try
+                {
+                    HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(uri);
+                    var response = (HttpWebResponse)await Task.Factory.FromAsync<WebResponse>(request.BeginGetResponse, request.EndGetResponse, null);
 
-            StreamReader strReader = new StreamReader(stream);
-            string text = await strReader.ReadToEndAsync();
+                    Stream stream = response.GetResponseStream();
 
-            return JsonConvert.DeserializeObject<T>(text);
+                    StreamReader strReader = new StreamReader(stream);
+                    string text = await strReader.ReadToEndAsync();
+
+                    return JsonConvert.DeserializeObject<List<Entity>>(text);
+                }
+                catch
+                {
+                    Debug.WriteLine($"{nameof(GetData)} failed to get state data from HomeAssistant. Attempt [{attempt}]. Time {DateTime.Now}.");
+
+                    await Task.Delay(100 + (attempt * 250));
+
+                    attempt++;
+                }
+            }
+
+            throw new Exception($"Failed to connect to Home Assistant. URI attempted: {uri.ToString()}.");
         }
 
         public static void SendActionNoData(string entityId)

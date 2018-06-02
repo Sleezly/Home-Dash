@@ -444,7 +444,7 @@ namespace HashBoard
         /// <summary>
         /// Starts the MQTT subscriber when needed.
         /// </summary>
-        private void StartMqttSubscriber()
+        private async void StartMqttSubscriber()
         {
             if (mqttSubscriber.IsSubscribed)
             {
@@ -452,6 +452,8 @@ namespace HashBoard
 
                 EntityUpdateRequestedQuitCancellationToken?.Cancel();
                 EntityUpdateRequestedWakeupCancellationToken?.Cancel();
+
+                await WebRequests.WaitForNetworkAvailable();
 
                 mqttSubscriber.Disconnect();
             }
@@ -747,7 +749,7 @@ namespace HashBoard
         private async Task<DateTime> UpdateEntitiesSinceLastUpdate(DateTime lastUpdatedTime)
         {   
             // Get all entities not just the entities we think we want
-            IEnumerable<Entity> allEntities = await GetStateData();
+            IEnumerable<Entity> allEntities = await WebRequests.GetData();
 
             if (null != allEntities)
             {
@@ -901,7 +903,7 @@ namespace HashBoard
 
             if (!string.IsNullOrEmpty(SettingsControl.HomeAssistantHostname))
             {
-                entities = await GetStateData();
+                entities = await WebRequests.GetData();
             }
 
             scrollViewer.Content = CreateViews(entities);
@@ -914,34 +916,6 @@ namespace HashBoard
             {
                 scrollViewer.HorizontalAlignment = HorizontalAlignment.Center;
             }
-        }
-
-        /// <summary>
-        /// Queries home assistant for state data. If a connection error occurs, shows the error via UI and stops all background threads.
-        /// </summary>
-        /// <returns></returns>
-        private async Task<IEnumerable<Entity>> GetStateData()
-        {
-            try
-            {
-                int attempt = 0;
-                while (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable() && attempt < 5)
-                {
-                    Debug.WriteLine($"{nameof(GetStateData)} no network connection availalbe. Attempt [{attempt}]. Time {DateTime.Now}");
-
-                    await Task.Delay(100 + (attempt * 250));
-                }
-
-                Task<List<Entity>> task = WebRequests.GetData<List<Entity>>("api/states");
-
-                return await task;
-            }
-            catch (Exception)
-            {
-                ShowErrorDialog("Connection Failure", $"Failed to connect to Home Assistant. URI attempted: {SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/states?apiPassword=[xxx]. Time {DateTime.Now.ToShortTimeString()}");
-            }
-
-            return null;
         }
 
         /// <summary>
