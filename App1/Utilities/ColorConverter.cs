@@ -163,5 +163,53 @@ namespace HashBoard
 
             return new HSV(h, s, v / 255);
         }
+
+        public static double[] RGBtoXY(RGB rgb)
+        {
+            double red = (rgb.R > 0.04045f) ? Math.Pow((rgb.R + 0.055f) / (1.0f + 0.055f), 2.4f) : (rgb.R / 12.92f);
+            double green = (rgb.G > 0.04045f) ? Math.Pow((rgb.G + 0.055f) / (1.0f + 0.055f), 2.4f) : (rgb.G / 12.92f);
+            double blue = (rgb.B > 0.04045f) ? Math.Pow((rgb.B + 0.055f) / (1.0f + 0.055f), 2.4f) : (rgb.B / 12.92f);
+
+            double X = red * 0.664511f + green * 0.154324f + blue * 0.162028f;
+            double Y = red * 0.283881f + green * 0.668433f + blue * 0.047685f;
+            double Z = red * 0.000088f + green * 0.072310f + blue * 0.986039f;
+
+            double[] xy = new double[2];
+
+            xy[0] = X / (X + Y + Z);
+            xy[1] = Y / (X + Y + Z);
+
+            return xy;
+        }
+
+        public static int XYToTemperature(double[] xy)
+        {
+            double x = xy[0];
+            double y = xy[1];
+            // Method 1
+            //http://stackoverflow.com/questions/13975917/calculate-colour-temperature-in-k
+            //=(-449*((R1-0,332)/(S1-0,1858))^3)+(3525*((R1-0,332)/(S1-0,1858))^2)-(6823,3*((R1-0,332)/(S1-0,1858)))+(5520,33)
+            //        double temp1 = -449 * Math.pow((x - 0.332) / (y - 0.1858), 3)
+            //                + 3525 * Math.pow((x - 0.332) / (y - 0.1858), 2)
+            //                - 6823.3 * ((x - 0.332) / (y - 0.1858))
+            //                + 5520.33;
+            //        float micro1 = (float) (1 / temp1 * 1000000);
+
+            // Method 2
+            //http://www.vinland.com/Correlated_Color_Temperature.html
+            //         437*((x - 0,332)/(0,1858 - y))^3+
+            //                3601*((x - 0,332)/(0,1858 - y))^2+
+            //                6831*((x - 0,332)/(0,1858 - y)) +
+            //                5517
+            double temp2 = (437 * Math.Pow((x - 0.332) / (0.1858 - y), 3) +
+                    3601 * Math.Pow((x - 0.332) / (0.1858 - y), 2) +
+                    6831 * ((x - 0.332) / (0.1858 - y))) +
+                    5517;
+            //To set the light to a white value you need to interact with the “ct” (color temperature) resource,
+            // which takes values in a scale called “reciprocal megakelvin” or “mirek”.
+            // Using this scale, the warmest color 2000K is 500 mirek ("ct":500) and the coldest color 6500K is 153 mirek ("ct":153)
+            double micro2 = (double)(1 / temp2 * 1000000);
+            return (int)micro2;
+        }
     }
 }
