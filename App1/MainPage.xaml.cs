@@ -124,12 +124,35 @@ namespace HashBoard
         {
             Debug.WriteLine($"{nameof(App_Resuming)} starting any additional threads for Resume.");
 
-            // Force an update of all entities immediately to ensure all panels have up-to-date state data
-            await UpdateEntitiesSinceLastUpdate(default(DateTime));
+            bool doneResuming = false;
+            int resumingAttempt = 0;
 
-            StartPollingThread();
+            while (!doneResuming)
+            {
+                await Task.Delay(100 + (resumingAttempt * 250));
 
-            StartMqttSubscriber();
+                try
+                {
+                    // Force an update of all entities immediately to ensure all panels have up-to-date state data
+                    await UpdateEntitiesSinceLastUpdate(default(DateTime));
+
+                    await Task.Delay(100 + (resumingAttempt * 250));
+
+                    StartMqttSubscriber();
+
+                    await Task.Delay(100 + (resumingAttempt * 250));
+
+                    StartPollingThread();
+
+                    doneResuming = true;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"{nameof(App_Resuming)} exception caught as attempt {resumingAttempt + 1}. {ex.Message}.");
+                }
+            }
+
+            Debug.WriteLine($"{nameof(App_Resuming)} done resuming. Took {resumingAttempt+1} attempts.");
         }
 
         /// <summary>

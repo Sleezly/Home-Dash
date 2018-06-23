@@ -54,7 +54,14 @@ namespace HashBoard
 
         private static Image GetWeatherImage(string darkSkySensorState)
         {
-            return Imaging.LoadImage($"weather\\{darkSkySensorState.Split(':')[1]}.png");
+            if (darkSkySensorState.Contains(":"))
+            {
+                return Imaging.LoadImage($"weather\\{darkSkySensorState.Split(':')[1]}.png");
+            }
+            else
+            {
+                return Imaging.LoadImage($"weather\\error.png");
+            }
         }
     }
 }
