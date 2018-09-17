@@ -109,7 +109,7 @@ namespace Hashboard
             if (PanelEntity.HasSupportedFeatures((uint)MediaPlatformSupportedFeatures.VolumeSet) &&
                 PanelEntity.Attributes.ContainsKey("volume_level"))
             {
-                double percentagePrevious = Convert.ToInt16(10 * scobblerProgress1.X2 / scobblerLine.X2) / 10.0;
+                double percentagePrevious = Convert.ToInt16(15 * scobblerProgress1.X2 / scobblerLine.X2) / 15.0;
 
                 scobblerProgress1.X2 = scobblerLine.X2 * Convert.ToDouble(PanelEntity.Attributes["volume_level"]);
                 scobblerProgress2.X1 = scobblerProgress1.X2 - scobblerProgress2.StrokeThickness;
