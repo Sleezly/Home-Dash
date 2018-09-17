@@ -75,8 +75,8 @@ namespace Hashboard
             TextBlock targetTemperature = this.FindName("TargetTemperature") as TextBlock;
 
             deviceName.Text = ClimateEntity.Attributes["friendly_name"].ToUpper();
-            currentTemperature.Text = $"ACTUAL: {ClimateEntity.Attributes["current_temperature"]}{ClimateEntity.Attributes["unit_of_measurement"]}";
-            targetTemperature.Text = $"{ClimateEntity.Attributes["temperature"]}{ClimateEntity.Attributes["unit_of_measurement"]}";
+            currentTemperature.Text = $"ACTUAL: {ClimateEntity.Attributes["current_temperature"]}";
+            targetTemperature.Text = $"{ClimateEntity.Attributes["temperature"]}";
 
             // Operation drop-down
             ComboBox comboOperation = this.FindName("ComboOperation") as ComboBox;
@@ -140,7 +140,7 @@ namespace Hashboard
 
             // Update the UI
             TextBlock targetTemperature = this.FindName("TargetTemperature") as TextBlock;
-            targetTemperature.Text = $"{ClimateEntity.Attributes["temperature"]}{ClimateEntity.Attributes["unit_of_measurement"]}";
+            targetTemperature.Text = $"{ClimateEntity.Attributes["temperature"]}";
         }
 
         private void BitmapIcon_PointerPressed(object sender, PointerRoutedEventArgs e)
