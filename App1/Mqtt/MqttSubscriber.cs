@@ -76,7 +76,7 @@ namespace HashBoard
                 }
                 catch (Exception e)
                 {
-                    Status = e.InnerException.ToString();
+                    Status = e.Message;
                 }
                 finally
                 { 
