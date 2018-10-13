@@ -129,10 +129,10 @@ namespace HashBoard
 
             while (!doneResuming)
             {
-                await Task.Delay(100 + (resumingAttempt * 250));
-
                 try
                 {
+                    await Task.Delay(100 + (resumingAttempt * 250));
+                
                     // Force an update of all entities immediately to ensure all panels have up-to-date state data
                     await UpdateEntitiesSinceLastUpdate(default(DateTime));
 
@@ -830,7 +830,7 @@ namespace HashBoard
 
             if (EntityUpdateRequestedQuitCancellationToken == null)
             {
-                throw new ArgumentException($"{nameof(MqttEntityUpdateRequestedResponseThread)} cancellation token was not set by caller.");
+                throw new ArgumentException($"{nameof(EntityUpdateRequestedQuitCancellationToken)} cancellation token was not set by caller.");
             }
 
             EntityUpdateRequestedWakeupCancellationToken = new CancellationTokenSource();
@@ -874,7 +874,7 @@ namespace HashBoard
 
             if (PollingThreadQuitCancellationToken == null)
             {
-                throw new ArgumentException($"{nameof(PeriodicMqttHealthCheckPollingThread)} cancellation token was not set by caller.");
+                throw new ArgumentException($"{nameof(PollingThreadQuitCancellationToken)} cancellation token was not set by caller.");
             }
 
             PollingThreadResetTimerCancellationToken = new CancellationTokenSource();
@@ -891,6 +891,9 @@ namespace HashBoard
                     ResubscribeToMqttBrokerIfNeeded();
                 }
             }
+
+            PollingThreadQuitCancellationToken = null;
+            PollingThreadResetTimerCancellationToken = null;
 
             Debug.WriteLine($"{nameof(PeriodicMqttHealthCheckPollingThread)} now terminating.");
         }
@@ -1120,44 +1123,50 @@ namespace HashBoard
             {
                 Entity entity = allEntities.FirstOrDefault(x => x.EntityId == groupEntityId);
 
+                // Handle an entity which is expected to exist but not yet loaded by Home Assistant. This allows
+                // for that entity to be handled and displayed later when finally loaded.
                 if (null == entity)
                 {
-                    ShowErrorDialog("Config Error", $"Unable to find entity '{groupEntityId}' in the '{entityHeader.EntityId}' group.");
+                    entity = new Entity();
+                    entity.EntityId = groupEntityId;
+                    entity.State = "off";
+                    entity.Attributes = new Dictionary<string, dynamic>
+                    {
+                        ["friendly_name"] = groupEntityId.Split('.')[1],
+                    };
+                }
+                
+                if (entity.Attributes.ContainsKey("entity_id"))
+                {
+                    // Group panel
+                    Panel panelGroup = CreateGroupEntityPanel(entity, allEntities);
+
+                    if (panelGroup != null)
+                    {
+                        wrapPanel.Children.Add(panelGroup);
+                    }
+
+                    // Children entities
+                    foreach (string childEntityId in entity.Attributes["entity_id"])
+                    {
+                        Entity childEntity = allEntities.First(x => x.EntityId == childEntityId);
+
+                        Panel panelChild = CreateChildEntityPanel(childEntity);
+
+                        if (panelChild != null)
+                        {
+                            wrapPanel.Children.Add(panelChild);
+                        }
+                    }
                 }
                 else
                 {
-                    if (entity.Attributes.ContainsKey("entity_id"))
+                    // Single entity
+                    Panel panel = CreateChildEntityPanel(entity);
+
+                    if (panel != null)
                     {
-                        // Group panel
-                        Panel panelGroup = CreateGroupEntityPanel(entity, allEntities);
-
-                        if (panelGroup != null)
-                        {
-                            wrapPanel.Children.Add(panelGroup);
-                        }
-
-                        // Children entities
-                        foreach (string childEntityId in entity.Attributes["entity_id"])
-                        {
-                            Entity childEntity = allEntities.First(x => x.EntityId == childEntityId);
-
-                            Panel panelChild = CreateChildEntityPanel(childEntity);
-
-                            if (panelChild != null)
-                            {
-                                wrapPanel.Children.Add(panelChild);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // Single entity
-                        Panel panel = CreateChildEntityPanel(entity);
-
-                        if (panel != null)
-                        {
-                            wrapPanel.Children.Add(panel);
-                        }
+                        wrapPanel.Children.Add(panel);
                     }
                 }
             }

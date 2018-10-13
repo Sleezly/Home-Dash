@@ -33,7 +33,7 @@ namespace HashBoard
         public static async Task<List<Entity>> GetData()
         {
             const string apiAction = @"api/states";
-            const uint maxRetries = 5;
+            const uint maxRetries = 25;
 
             Uri uri = new Uri($"{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/{apiAction}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
 
