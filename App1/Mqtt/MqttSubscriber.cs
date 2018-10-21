@@ -1,6 +1,7 @@
 ﻿using Hashboard;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using uPLibrary.Networking.M2Mqtt;
 using uPLibrary.Networking.M2Mqtt.Messages;
@@ -18,9 +19,7 @@ namespace HashBoard
 
         private OnConnectionResult OnConnectCallback { get; set; }
 
-        private Dictionary<string, Dictionary<string, string>> topics = new Dictionary<string, Dictionary<string, string>>();
-
-        private Dictionary<byte, string> ConnackResponseCodes = new Dictionary<byte, string>()
+        private readonly Dictionary<byte, string> ConnackResponseCodes = new Dictionary<byte, string>()
         {
             { MqttConnectionSuccess, "Connection accepted." },
             { 1, "The Server does not support the level of the MQTT protocol requested by the Client." },
@@ -79,21 +78,12 @@ namespace HashBoard
                     Status = e.Message;
                 }
                 finally
-                { 
+                {
+                    Telemetry.TrackEvent(nameof(Connect), new Dictionary<string, string>(client.ToDictionary()) { [nameof(Status)] = Status });
+
                     OnConnectCallback(response);
                 }
             });
-        }
-
-        /// <summary>
-        /// Disconnect from the MQTT broker.
-        /// </summary>
-        public void Disconnect()
-        {
-            if (IsSubscribed)
-            {
-                client.Disconnect();
-            }
         }
 
         /// <summary>

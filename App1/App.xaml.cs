@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.HockeyApp;
+using System;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.UI.ViewManagement;
@@ -23,7 +24,9 @@ namespace HashBoard
 //            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.Auto;
 //#else
             ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
-//#endif
+            //#endif
+            
+            HockeyClient.Current.Configure("38f851028ab5480895b21df30d901ae9");
 
             this.InitializeComponent();
             this.Suspending += OnSuspending;

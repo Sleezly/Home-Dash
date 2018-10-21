@@ -2,7 +2,6 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -22,7 +21,7 @@ namespace HashBoard
             int attempt = 0;
             while (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable() && attempt < maxRetries)
             {
-                Debug.WriteLine($"{nameof(GetData)} no network connection availalbe. Attempt [{attempt}]. Time {DateTime.Now}.");
+                Telemetry.TrackTrace($"{nameof(GetData)} no network connection availalbe. Attempt [{attempt}]. Time {DateTime.Now}.");
 
                 await Task.Delay(100 + (attempt * 250));
 
@@ -56,7 +55,7 @@ namespace HashBoard
                 }
                 catch
                 {
-                    Debug.WriteLine($"{nameof(GetData)} failed to get state data from HomeAssistant. Attempt [{attempt}]. Time {DateTime.Now}.");
+                    Telemetry.TrackTrace($"{nameof(GetData)} failed to get state data from HomeAssistant. Attempt [{attempt}]. Time {DateTime.Now}.");
 
                     await Task.Delay(100 + (attempt * 250));
 
@@ -120,7 +119,7 @@ namespace HashBoard
             {
                 Uri uri = new Uri($"{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
 
-                Debug.WriteLine($"{nameof(SendData)} Uri:{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}?{ApiPassword}=[xxxx] Json:{data}");
+                Telemetry.TrackTrace($"{nameof(SendData)} Uri:{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}?{ApiPassword}=[xxxx] Json:{data}");
 
                 HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(uri);
 
@@ -138,27 +137,7 @@ namespace HashBoard
                 }
 
                 var response = (HttpWebResponse)await Task.Factory.FromAsync<WebResponse>(request.BeginGetResponse, request.EndGetResponse, null);
-
-                //Stream stream = response.GetResponseStream();
-
-                //StreamReader strReader = new StreamReader(stream);
-
-                //string text = await strReader.ReadToEndAsync();
-
-                //return;
             });
-            //request.BeginGetResponse((x) =>
-            //{
-            //    using (HttpWebResponse response = (HttpWebResponse)request.EndGetResponse(x))
-            //    {
-            //        Stream webStream = response.GetResponseStream();
-
-            //        StreamReader responseReader = new StreamReader(webStream);
-
-            //        string text = responseReader.ReadToEnd();
-            //    }
-            //}, null);
-
         }
     }
 }

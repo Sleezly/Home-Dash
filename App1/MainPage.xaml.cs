@@ -2,7 +2,6 @@
 using Microsoft.Toolkit.Uwp.UI.Controls;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -108,11 +107,24 @@ namespace HashBoard
             Application.Current.Suspending += App_Suspending;
             Application.Current.Resuming += App_Resuming;
 
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;            
+
             LoadCustomEntityHandler();
 
             StartPollingThread();
 
             StartMqttSubscriber();
+        }
+
+        private void CurrentDomain_UnhandledException(object sender, System.UnhandledExceptionEventArgs e)
+        {
+            Telemetry.TrackException(nameof(CurrentDomain_UnhandledException), e.ExceptionObject as Exception);
+        }
+
+        private void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
+        {
+            Telemetry.TrackException(nameof(TaskScheduler_UnobservedTaskException), e.Exception);
         }
 
         /// <summary>
@@ -122,10 +134,12 @@ namespace HashBoard
         /// <param name="e"></param>
         private async void App_Resuming(object sender, object e)
         {
-            Debug.WriteLine($"{nameof(App_Resuming)} starting any additional threads for Resume.");
+            Telemetry.TrackEvent(nameof(App_Resuming));
 
             bool doneResuming = false;
             int resumingAttempt = 0;
+
+            await WebRequests.WaitForNetworkAvailable();
 
             while (!doneResuming)
             {
@@ -148,11 +162,11 @@ namespace HashBoard
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"{nameof(App_Resuming)} exception caught as attempt {resumingAttempt + 1}. {ex.Message}.");
+                    Telemetry.TrackException(nameof(App_Resuming), ex);
                 }
             }
 
-            Debug.WriteLine($"{nameof(App_Resuming)} done resuming. Took {resumingAttempt+1} attempts.");
+            Telemetry.TrackTrace($"{nameof(App_Resuming)} done resuming. Took {resumingAttempt+1} attempts.");
         }
 
         /// <summary>
@@ -162,13 +176,7 @@ namespace HashBoard
         /// <param name="e"></param>
         private void App_Suspending(object sender, Windows.ApplicationModel.SuspendingEventArgs e)
         {
-            Debug.WriteLine($"{nameof(App_Suspending)} stopping all threads to prepare for Suspend.");
-
-            PollingThreadQuitCancellationToken?.Cancel();
-            PollingThreadResetTimerCancellationToken?.Cancel();
-
-            EntityUpdateRequestedQuitCancellationToken?.Cancel();
-            EntityUpdateRequestedWakeupCancellationToken?.Cancel();
+            Telemetry.TrackEvent(nameof(App_Suspending));
         }
 
         /// <summary>
@@ -209,21 +217,28 @@ namespace HashBoard
         {
             await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
-                LightSensorReading lightSensorReading = lightSensor.GetCurrentReading();
-
-                if (BrightnessOverrideSetting != null && BrightnessOverrideSetting.IsSupported)
+                try
                 {
-                    const double maximumAllowedBrightness = 0.15;
-                    const double highestLuxValueBeforeFullBrightness = 25.0;
+                    LightSensorReading lightSensorReading = lightSensor.GetCurrentReading();
 
-                    double brightness = Math.Min(lightSensorReading.IlluminanceInLux, highestLuxValueBeforeFullBrightness) / highestLuxValueBeforeFullBrightness * maximumAllowedBrightness;
-
-                    if (PreviousDisplayBrightness != brightness)
+                    if (BrightnessOverrideSetting != null && BrightnessOverrideSetting.IsSupported)
                     {
-                        BrightnessOverrideSetting.SetBrightnessLevel(brightness, DisplayBrightnessOverrideOptions.None);
+                        const double maximumAllowedBrightness = 0.15;
+                        const double highestLuxValueBeforeFullBrightness = 25.0;
 
-                        PreviousDisplayBrightness = brightness;
+                        double brightness = Math.Min(lightSensorReading.IlluminanceInLux, highestLuxValueBeforeFullBrightness) / highestLuxValueBeforeFullBrightness * maximumAllowedBrightness;
+
+                        if (PreviousDisplayBrightness != brightness)
+                        {
+                            BrightnessOverrideSetting.SetBrightnessLevel(brightness, DisplayBrightnessOverrideOptions.None);
+
+                            PreviousDisplayBrightness = brightness;
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    Telemetry.TrackException(nameof(LightSensor_ReadingChanged), ex);
                 }
             });
         }
@@ -293,7 +308,7 @@ namespace HashBoard
                     EntityIdStartsWith = "automation.",
                     TapHandler = new PanelTouchHandler("trigger", ResponseExpected.None),
                     TapAndHoldHandler = new PanelTouchHandler("toggle", ResponseExpected.EntityUpdated) },
-                
+
                 // Default Settings Control Panel
                 new NameOnlyPanelBuilder() {
                     EntityIdStartsWith = $"{SettingsControlPanelName}.",
@@ -440,23 +455,25 @@ namespace HashBoard
             {
                 if (PollingThreadQuitCancellationToken != null)
                 {
-                    Debug.WriteLine($"{nameof(StartPollingThread)} stopping polling thread as polling interval is set to zero.");
+                    Telemetry.TrackTrace($"{nameof(StartPollingThread)} stopping polling thread as polling interval is set to zero.");
 
                     PollingThreadQuitCancellationToken.Cancel();
                 }
                 else
                 {
-                    Debug.WriteLine($"{nameof(StartPollingThread)} no polling thread as polling interval is not set.");
+                    Telemetry.TrackTrace($"{nameof(StartPollingThread)} no polling thread as polling interval is not set.");
                 }
             }
             else
             {
                 if (PollingThreadQuitCancellationToken != null)
                 {
-                    Debug.WriteLine($"{nameof(StartPollingThread)} polling thread is already active.");
+                    Telemetry.TrackTrace($"{nameof(StartPollingThread)} polling thread is already active.");
                 }
                 else
                 {
+                    Telemetry.TrackTrace($"{nameof(StartPollingThread)} polling thread is starting.");
+
                     // Kick off the polling thread
                     PollingThreadQuitCancellationToken = new CancellationTokenSource();
                     Task.Factory.StartNew(PeriodicMqttHealthCheckPollingThread, PollingThreadQuitCancellationToken.Token);
@@ -469,27 +486,23 @@ namespace HashBoard
         /// </summary>
         private async void StartMqttSubscriber()
         {
-            if (mqttSubscriber.IsSubscribed)
-            {
-                Debug.WriteLine($"{nameof(StartMqttSubscriber)} Disconnecting from previous MQTT subscription.");
-
-                EntityUpdateRequestedQuitCancellationToken?.Cancel();
-                EntityUpdateRequestedWakeupCancellationToken?.Cancel();
-
-                await WebRequests.WaitForNetworkAvailable();
-
-                mqttSubscriber.Disconnect();
-            }
-
             if (string.IsNullOrEmpty(SettingsControl.MqttBrokerHostname))
             {
-                Debug.WriteLine($"{nameof(StartMqttSubscriber)} no MQTT subscriber as no MQTT broker hostname is set.");
+                Telemetry.TrackTrace($"{nameof(StartMqttSubscriber)} no MQTT subscriber as no MQTT broker hostname is set.");
                 return;
             }
 
-            mqttSubscriber.Connect(OnEntityUpdated, OnMqttBrokerConnectionResult);
+            if (mqttSubscriber.IsSubscribed)
+            {
+                Telemetry.TrackTrace($"{nameof(StartMqttSubscriber)} is already connected to MQTT.");
+                return;
+            }
 
-            Debug.WriteLine($"{nameof(StartMqttSubscriber)} attempting to connect to MQTT broker.");
+            Telemetry.TrackTrace($"{nameof(StartMqttSubscriber)} attempting to connect to MQTT broker.");
+
+            await WebRequests.WaitForNetworkAvailable();
+
+            mqttSubscriber.Connect(OnEntityUpdated, OnMqttBrokerConnectionResult);
         }
 
         /// <summary>
@@ -501,7 +514,7 @@ namespace HashBoard
             switch (connectionResponse)
             {
                 case MqttSubscriber.MqttConnectionSuccess:
-                    Debug.WriteLine($"{nameof(StartMqttSubscriber)} successfully subscribed to MQTT brodker '{SettingsControl.MqttBrokerHostname}'.");
+                    Telemetry.TrackTrace($"{nameof(OnMqttBrokerConnectionResult)} successfully subscribed to MQTT brodker '{SettingsControl.MqttBrokerHostname}'.");
 
                     // Connected successfully. Start the MQTT response receiver thread which will process the MQTT events.
                     EntityUpdateRequestedQuitCancellationToken = new CancellationTokenSource();
@@ -509,7 +522,7 @@ namespace HashBoard
                     break;
 
                 case MqttSubscriber.MqttConnectionException:
-                    Debug.WriteLine($"{nameof(StartMqttSubscriber)} encountered exception while attempting to connect to '{SettingsControl.MqttBrokerHostname}'. Retrying.");
+                    Telemetry.TrackTrace($"{nameof(OnMqttBrokerConnectionResult)} encountered exception while attempting to connect to '{SettingsControl.MqttBrokerHostname}'. Retrying.");
 
                     // Failed to connect. This typically means we (the client) were not yet ready to start the subscriber or did not cleanup a previous connection
                     // after a suspend/resume sequence of events. So, wait a little bit and try again. Ugh.
@@ -694,8 +707,10 @@ namespace HashBoard
         /// <param name="panel"></param>
         private void MarkPanelAsUpdateRequired(Panel panel)
         {
-            panel.Background = new SolidColorBrush(Colors.Lime);
-            panel.Background.Opacity = StateIsOffOpacity;
+            panel.Background = new SolidColorBrush(Colors.Lime)
+            {
+                Opacity = StateIsOffOpacity
+            };
         }
 
         /// <summary>
@@ -761,7 +776,7 @@ namespace HashBoard
 
                     if (PopupEntity.Attributes.ContainsKey("entity_picture"))
                     {
-                        Debug.WriteLine($"{PopupEntity.Attributes["entity_picture"]}");
+                        Telemetry.TrackTrace($"{PopupEntity.Attributes["entity_picture"]}");
                     }
 
                     NotifyPopupEntityUpdate(PopupEntity, childrenEntities);
@@ -793,13 +808,13 @@ namespace HashBoard
                             if (!entitiesToUpdate.Any(x => x.EntityId == group.EntityId))
                             {
                                 // Add this group entity which is missing from the update requested list
-                                Debug.WriteLine($"{nameof(UpdateEntitiesSinceLastUpdate)} manually adding group {group.EntityId} to update list.");
+                                Telemetry.TrackTrace($"{nameof(UpdateEntitiesSinceLastUpdate)} manually adding group {group.EntityId} to update list.");
                                 entitiesToUpdate = entitiesToUpdate.Union(new List<Entity>() { group });
                             }
                         }
                     }
 
-                    Debug.WriteLine($"{nameof(UpdateEntitiesSinceLastUpdate)} has updated Entities: {string.Join(", ", entitiesToUpdate.Select(x => x.EntityId).ToList())}");
+                    Telemetry.TrackTrace($"{nameof(UpdateEntitiesSinceLastUpdate)} has updated Entities: {string.Join(", ", entitiesToUpdate.Select(x => x.EntityId).ToList())}");
 
                     // Perform the update on the UI thread; don't block
                     UpdateEntityPanels(entitiesToUpdate, allEntities);
@@ -817,7 +832,7 @@ namespace HashBoard
         {
             // Set the event token signal -- very important to avoid blocking this thread since this is doing work
             // on the MQTT subscriber thread and will block additional entity updates from being requested.
-            EntityUpdateRequestedWakeupCancellationToken.Cancel();
+            EntityUpdateRequestedWakeupCancellationToken?.Cancel();
         }
 
         /// <summary>
@@ -826,7 +841,7 @@ namespace HashBoard
         /// </summary>
         private async void MqttEntityUpdateRequestedResponseThread()
         {
-            Debug.WriteLine($"{nameof(MqttEntityUpdateRequestedResponseThread)} is now starting.");
+            Telemetry.TrackTrace($"{nameof(MqttEntityUpdateRequestedResponseThread)} is now starting.");
 
             if (EntityUpdateRequestedQuitCancellationToken == null)
             {
@@ -856,13 +871,7 @@ namespace HashBoard
                 }
             }
 
-            // Terminating so disconnect from MQTT as well
-            if (mqttSubscriber.IsSubscribed)
-            {
-                mqttSubscriber.Disconnect();
-            }
-
-            Debug.WriteLine($"{nameof(MqttEntityUpdateRequestedResponseThread)} is now terminating.");
+            Telemetry.TrackTrace($"{nameof(MqttEntityUpdateRequestedResponseThread)} is now terminating.");
         }
 
         /// <summary>
@@ -870,7 +879,7 @@ namespace HashBoard
         /// </summary>
         private async void PeriodicMqttHealthCheckPollingThread()
         {
-            Debug.WriteLine($"{nameof(PeriodicMqttHealthCheckPollingThread)} is starting.");
+            Telemetry.TrackTrace($"{nameof(PeriodicMqttHealthCheckPollingThread)} is starting.");
 
             if (PollingThreadQuitCancellationToken == null)
             {
@@ -884,7 +893,7 @@ namespace HashBoard
             {
                 await Task.Delay(SettingsControl.HomeAssistantPollingInterval, PollingThreadResetTimerCancellationToken.Token).ContinueWith(tsk => { });
 
-                Debug.WriteLine($"{nameof(PeriodicMqttHealthCheckPollingThread)} now processing.");
+                Telemetry.TrackTrace($"{nameof(PeriodicMqttHealthCheckPollingThread)} now processing.");
 
                 if (!PollingThreadResetTimerCancellationToken.IsCancellationRequested)
                 {
@@ -895,7 +904,7 @@ namespace HashBoard
             PollingThreadQuitCancellationToken = null;
             PollingThreadResetTimerCancellationToken = null;
 
-            Debug.WriteLine($"{nameof(PeriodicMqttHealthCheckPollingThread)} now terminating.");
+            Telemetry.TrackTrace($"{nameof(PeriodicMqttHealthCheckPollingThread)} now terminating.");
         }
 
         /// <summary>
@@ -908,7 +917,7 @@ namespace HashBoard
             {
                 if (!mqttSubscriber.IsSubscribed)
                 {
-                    Debug.WriteLine($"{nameof(ResubscribeToMqttBrokerIfNeeded)} found unexpected MQTT disconnect. Attempting to reconnect.");
+                    Telemetry.TrackTrace($"{nameof(ResubscribeToMqttBrokerIfNeeded)} found unexpected MQTT disconnect. Attempting to reconnect.");
 
                     StartMqttSubscriber();
                 }
@@ -987,7 +996,7 @@ namespace HashBoard
                     int indexOfElement = parentPanel.Children.IndexOf(element);
                     parentPanel.Children[indexOfElement] = panel;
 
-                    Debug.WriteLine($"Replaced Panel: {entity.EntityId}.");
+                    Telemetry.TrackTrace($"Replaced Panel: {entity.EntityId}.");
                 }
             }
             else
@@ -1052,16 +1061,22 @@ namespace HashBoard
         /// <returns></returns>
         private Grid CreateHeaderTextBlockForGoupViewEntity(Entity entity)
         {
-            Grid grid = new Grid();
-            grid.Background = new SolidColorBrush(Colors.Black);
-            grid.Background.Opacity = 0.4;
-            grid.Padding = new Thickness(4);
+            Grid grid = new Grid
+            {
+                Background = new SolidColorBrush(Colors.Black)
+                {
+                    Opacity = 0.4
+                },
+                Padding = new Thickness(4)
+            };
 
-            TextBlock textBlock = new TextBlock();
-            textBlock.Text = Convert.ToString(entity.Attributes["friendly_name"]).ToUpper();
-            textBlock.FontSize = 18;
-            textBlock.FontWeight = FontWeights.Bold;
-            textBlock.Foreground = new SolidColorBrush(Colors.White);
+            TextBlock textBlock = new TextBlock
+            {
+                Text = Convert.ToString(entity.Attributes["friendly_name"]).ToUpper(),
+                FontSize = 18,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Colors.White)
+            };
 
             grid.Children.Add(textBlock);
 
@@ -1075,9 +1090,11 @@ namespace HashBoard
         /// <returns></returns>
         private StackPanel CreateViews(IEnumerable<Entity> allEntities)
         {
-            StackPanel stackPanel = new StackPanel();
-            stackPanel.Orientation = Orientation.Vertical;
-            stackPanel.HorizontalAlignment = HorizontalAlignment.Center;
+            StackPanel stackPanel = new StackPanel
+            {
+                Orientation = Orientation.Vertical,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
 
             if (null != allEntities)
             {
@@ -1127,12 +1144,14 @@ namespace HashBoard
                 // for that entity to be handled and displayed later when finally loaded.
                 if (null == entity)
                 {
-                    entity = new Entity();
-                    entity.EntityId = groupEntityId;
-                    entity.State = "off";
-                    entity.Attributes = new Dictionary<string, dynamic>
+                    entity = new Entity
                     {
-                        ["friendly_name"] = groupEntityId.Split('.')[1],
+                        EntityId = groupEntityId,
+                        State = "off",
+                        Attributes = new Dictionary<string, dynamic>
+                        {
+                            ["friendly_name"] = groupEntityId.Split('.')[1],
+                        }
                     };
                 }
                 
