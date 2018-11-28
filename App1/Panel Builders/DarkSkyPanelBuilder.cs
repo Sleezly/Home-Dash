@@ -52,11 +52,11 @@ namespace HashBoard
             return panel;
         }
 
-        private static Image GetWeatherImage(string darkSkySensorState)
+        private static Image GetWeatherImage(string state)
         {
-            if (darkSkySensorState.Contains(":"))
+            if (state.Contains(":"))
             {
-                return Imaging.LoadImage($"weather\\{darkSkySensorState.Split(':')[1]}.png");
+                return Imaging.LoadImage($"weather\\{state.Split(':')[1]}.png");
             }
             else
             {
