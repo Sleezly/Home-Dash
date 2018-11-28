@@ -111,6 +111,9 @@
     <Compile Include="Controls\MediaControl.xaml.cs">
       <DependentUpon>MediaControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\WebLinkControl.xaml.cs">
+      <DependentUpon>WebLinkControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Extensions\ExtensionMethods.cs" />
     <Compile Include="Extensions\EntityExtensions.cs" />
     <Compile Include="Mqtt\MqttSubscriber.cs" />
@@ -206,6 +209,10 @@
     <Page Include="Controls\LightControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\WebLinkControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="MainPage.xaml">
       <Generator>MSBuild:Compile</Generator>

@@ -84,6 +84,7 @@ namespace HashBoard
             nameof(ClimateControl),
             nameof(SettingsControl),
             nameof(ThemeControl),
+            nameof(WebLinkControl),
         };
 
         /// <summary>
@@ -253,14 +254,14 @@ namespace HashBoard
                     Size = EntitySize.Wide,
                     FontSize = 24 },
 
-                // Dark Sky summary
+                // Daily Weather Summary
                 new StateOnlyPanelBuilder() {
-                    EntityIdStartsWith = "sensor.dark_sky_daily_summary",
+                    EntityIdStartsWith = "sensor.forecast_summary",
                     Size = EntitySize.Wide },
 
-                // Dark Sky temperature
+                // Current Temperature
                 new StateOnlyPanelBuilder() {
-                    EntityIdStartsWith = "sensor.dark_sky_temperature",
+                    EntityIdStartsWith = "sensor.temperature",
                     FontSize = 32 },
 
                 new DarkSkyPanelbuilder() {
@@ -308,6 +309,11 @@ namespace HashBoard
                     EntityIdStartsWith = "automation.",
                     TapHandler = new PanelTouchHandler("trigger", ResponseExpected.None),
                     TapAndHoldHandler = new PanelTouchHandler("toggle", ResponseExpected.EntityUpdated) },
+
+                // WebLink
+                new NameOnlyPanelBuilder() {
+                    EntityIdStartsWith = "weblink.",
+                    TapHandler = new PanelTouchHandler(nameof(WebLinkControl), ResponseExpected.None) },
 
                 // Default Settings Control Panel
                 new NameOnlyPanelBuilder() {
@@ -372,6 +378,10 @@ namespace HashBoard
 
                 case nameof(ThemeControl):
                     popupContent = new ThemeControl(LoadFrame);
+                    break;
+
+                case nameof(WebLinkControl):
+                    popupContent = new WebLinkControl(entity, ActualWidth, ActualHeight);
                     break;
 
                 default:
