@@ -16,18 +16,22 @@ namespace HashBoard
 
         protected override Panel CreateSinglePanel(Entity entity, int width, int height)
         {
-            Grid panel = new Grid();
-            panel.Width = width;
-            panel.Height = height;
-            panel.Padding = new Thickness(PanelMargins);
-            panel.Background = new SolidColorBrush(Colors.Transparent);
-            panel.CacheMode = new BitmapCache();
+            Grid panel = new Grid
+            {
+                Width = width,
+                Height = height,
+                Padding = new Thickness(PanelMargins),
+                Background = new SolidColorBrush(Colors.Transparent),
+                CacheMode = new BitmapCache()
+            };
 
-            TextBlock textDate = new TextBlock();
-            textDate.Text = entity.Attributes["friendly_name"] ?? string.Empty;
-            textDate.HorizontalAlignment = HorizontalAlignment.Center;
-            textDate.VerticalAlignment = VerticalAlignment.Top;
-            textDate.Foreground = FontColorBrush;
+            TextBlock textDate = new TextBlock
+            {
+                Text = entity.Attributes["friendly_name"] ?? string.Empty,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Top,
+                Foreground = FontColorBrush
+            };
 
             panel.Children.Add(textDate);
 
@@ -41,11 +45,13 @@ namespace HashBoard
                 panel.Children.Add(image);
             }
 
-            TextBlock textTemperature = new TextBlock();
-            textTemperature.Text = string.Join(" | ", entity.State.Split('/'));
-            textTemperature.HorizontalAlignment = HorizontalAlignment.Center;
-            textTemperature.VerticalAlignment = VerticalAlignment.Bottom;
-            textTemperature.Foreground = FontColorBrush;
+            TextBlock textTemperature = new TextBlock
+            {
+                Text = string.Join(" | ", entity.State.Split('/')),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Foreground = FontColorBrush
+            };
 
             panel.Children.Add(textTemperature);
 
