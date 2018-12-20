@@ -38,7 +38,16 @@ namespace HashBoard
 
         public static ImageBrush LoadImageBrush2(string asset)
         {
-            Uri imageUri = new Uri($"http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}{asset}");
+            Uri imageUri;
+
+            if (asset.Contains("http"))
+            {
+                imageUri = new Uri(asset);
+            }
+            else
+            {
+                imageUri = new Uri($"http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}{asset}");
+            }
 
             BitmapImage bitmapImage = new BitmapImage(imageUri);
 

@@ -1109,7 +1109,23 @@ namespace HashBoard
             if (null != allEntities)
             {
                 // Get all home assistant "group" entities which have the "view=true" attribute set in customizations.yaml
-                IEnumerable<Entity> entityHeaders = allEntities.Where(group => group.Attributes.ContainsKey("view"));
+                List<Entity> entityHeaders = allEntities.Where(group => group.Attributes.ContainsKey("view")).ToList();
+
+                // Supply a default group view header if none was provided (i.e. groups.yaml is empty)
+                if (!entityHeaders.Any())
+                {
+                    Entity defaultEntity = new Entity
+                    {
+                        EntityId = "group.default_view",
+                        Attributes = new Dictionary<string, dynamic>()
+                        {
+                            ["entity_id"] = allEntities.Select(x => x.EntityId),
+                            ["friendly_name"] = "Default",
+                        }
+                    };
+
+                    entityHeaders.Add(defaultEntity);
+                }
 
                 // Add all single and group entities which are tied to each view
                 foreach (Entity entityHeader in entityHeaders)
