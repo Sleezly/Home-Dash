@@ -32,7 +32,7 @@ namespace HashBoard
         public static async Task<List<Entity>> GetData()
         {
             const string apiAction = @"api/states";
-            const uint maxRetries = 25;
+            const uint maxRetries = 3;
 
             Uri uri = new Uri($"{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/{apiAction}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
 
@@ -63,7 +63,7 @@ namespace HashBoard
                 }
             }
 
-            throw new Exception($"Failed to connect to Home Assistant. URI attempted: {uri.ToString()}.");
+            return new List<Entity>();
         }
 
         public static void SendActionNoData(string entityId)

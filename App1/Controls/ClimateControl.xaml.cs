@@ -39,30 +39,38 @@ namespace Hashboard
         {
             LinearGradientBrush lgb = new LinearGradientBrush();
 
-            switch (entity.Attributes["operation_mode"] as string)
+            if (entity.Attributes.ContainsKey("operation_mode"))
             {
-                case "off":
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGray, Offset = 0 });
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.Gray, Offset = 1 });
-                    break;
+                switch (entity.Attributes["operation_mode"] as string)
+                {
+                    case "off":
+                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGray, Offset = 0 });
+                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.Gray, Offset = 1 });
+                        break;
 
-                case "eco":
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGreen, Offset = 0 });
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.Green, Offset = 1 });
-                    break;
+                    case "eco":
+                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGreen, Offset = 0 });
+                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.Green, Offset = 1 });
+                        break;
 
-                case "heat":
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.Orange, Offset = 0 });
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.OrangeRed, Offset = 1 });
-                    break;
+                    case "heat":
+                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.Orange, Offset = 0 });
+                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.OrangeRed, Offset = 1 });
+                        break;
 
-                case "cool":
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightSkyBlue, Offset = 0 });
-                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightCyan, Offset = 1 });
-                    break;
+                    case "cool":
+                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightSkyBlue, Offset = 0 });
+                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightCyan, Offset = 1 });
+                        break;
 
-                default:
-                    throw new ArgumentOutOfRangeException($"Unhandled climate operation mode '{entity.Attributes["operation_mode"]}'.");
+                    default:
+                        throw new ArgumentOutOfRangeException($"Unhandled climate operation mode '{entity.Attributes["operation_mode"]}'.");
+                }
+            }
+            else
+            {
+                lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGray, Offset = 0 });
+                lgb.GradientStops.Add(new GradientStop() { Color = Colors.DarkGray, Offset = 1 });
             }
 
             return lgb;
