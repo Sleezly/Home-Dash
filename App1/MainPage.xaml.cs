@@ -178,6 +178,8 @@ namespace HashBoard
         private void App_Suspending(object sender, Windows.ApplicationModel.SuspendingEventArgs e)
         {
             Telemetry.TrackEvent(nameof(App_Suspending));
+
+            DisconnectFromMqttBroker();
         }
 
         /// <summary>
@@ -907,7 +909,7 @@ namespace HashBoard
 
                 if (!PollingThreadResetTimerCancellationToken.IsCancellationRequested)
                 {
-                    ResubscribeToMqttBrokerIfNeeded();
+                    await ResubscribeToMqttBrokerIfNeeded();
                 }
             }
 
@@ -920,7 +922,7 @@ namespace HashBoard
         /// <summary>
         /// Checks if we are still subscribed to MQTT topic and if not, attempt to reconnect.
         /// </summary>
-        private void ResubscribeToMqttBrokerIfNeeded()
+        private async Task ResubscribeToMqttBrokerIfNeeded()
         {
             // Make sure our MQTT broker is connected if expected
             if (!string.IsNullOrEmpty(SettingsControl.MqttBrokerHostname))
@@ -929,8 +931,25 @@ namespace HashBoard
                 {
                     Telemetry.TrackTrace($"{nameof(ResubscribeToMqttBrokerIfNeeded)} found unexpected MQTT disconnect. Attempting to reconnect.");
 
+                    // Force an update of all entities immediately to ensure all panels have up-to-date state data
+                    await UpdateEntitiesSinceLastUpdate(default(DateTime));
+
                     StartMqttSubscriber();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Disconnect from the MQTT broker.
+        /// </summary>
+        private void DisconnectFromMqttBroker()
+        {
+            if (!string.IsNullOrEmpty(SettingsControl.MqttBrokerHostname))
+            {
+                mqttSubscriber.Disconnect();
+
+                PollingThreadQuitCancellationToken?.Cancel();
+                PollingThreadResetTimerCancellationToken?.Cancel();
             }
         }
 

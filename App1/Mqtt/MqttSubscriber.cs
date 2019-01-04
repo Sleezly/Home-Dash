@@ -87,6 +87,18 @@ namespace HashBoard
         }
 
         /// <summary>
+        /// Disconnect from the MQTT broker.
+        /// </summary>
+        /// <param name="entities"></param>
+        public void Disconnect()
+        {
+            if (IsSubscribed)
+            {
+                client.Disconnect();
+            }
+        }
+
+        /// <summary>
         /// MQTT subscriber event notification received callback.
         /// </summary>
         /// <param name="sender"></param>
