@@ -252,7 +252,7 @@ namespace HashBoard
             {
                 // Date/Time sensor
                 new DateTimePanelBuilder() {
-                    EntityIdStartsWith = "sensor.date__time",
+                    EntityIdStartsWith = "sensor.date_time",
                     Size = EntitySize.Wide,
                     FontSize = 24 },
 
