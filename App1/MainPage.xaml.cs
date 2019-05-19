@@ -285,8 +285,8 @@ namespace HashBoard
                     EntityIdStartsWith = "media_player.",
                     Size = EntitySize.Normal,
                     TapHandler = new PanelTouchHandler(new Dictionary<uint, string> {
-                        { (uint)MediaPlatformSupportedFeatures.PlayMedia, "media_play_pause" }, // ServiceAction for PlayMedia supported_feature
                         { (uint)MediaPlatformSupportedFeatures.TurnOn, "toggle" },              // ServiceAction for TurnOn supported_feature
+                        { (uint)MediaPlatformSupportedFeatures.PlayMedia, "media_play_pause" }, // ServiceAction for PlayMedia supported_feature
                         }, ResponseExpected.EntityUpdated),
                     TapAndHoldHandler = new PanelTouchHandler(nameof(MediaControl), ResponseExpected.None) },
 

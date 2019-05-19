@@ -25,17 +25,21 @@ namespace Hashboard
         /// <returns></returns>
         public string GetServiceAction(Entity entity)
         {
-            if (ServiceActionForSupportedFeatureMap.Count == 0)
+            if (!ServiceActionForSupportedFeatureMap.Any())
             {
                 return string.Empty;
             }
 
-            if (ServiceActionForSupportedFeatureMap.Count == 1)
+            // Get the ServiceActions currenlty supported and allowed by this device
+            IEnumerable<KeyValuePair<uint, string>> serviceActions = ServiceActionForSupportedFeatureMap.Where(x => entity.HasSupportedFeatures(x.Key));
+            if (!serviceActions.Any())
             {
-                return ServiceActionForSupportedFeatureMap.First().Value;
+                return string.Empty;
             }
 
-            return ServiceActionForSupportedFeatureMap.SingleOrDefault(x => entity.HasSupportedFeatures(x.Key)).Value;
+            // For multiple service actions which are supported given current state (e.g. media_player which has 'supported_features'
+            // for 'toggle' and 'media_play_pause' both allowed), take the first service action as defined by the Handler's configuration. 
+            return serviceActions.First().Value;
         }
 
         public PanelTouchHandler(string serviceAction, ResponseExpected responseExpected)
