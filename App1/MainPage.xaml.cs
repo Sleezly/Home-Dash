@@ -138,7 +138,7 @@ namespace HashBoard
             Telemetry.TrackEvent(nameof(App_Resuming));
 
             bool doneResuming = false;
-            int resumingAttempt = 0;
+            int resumingAttempt = 1;
 
             await WebRequests.WaitForNetworkAvailable();
 
@@ -147,17 +147,17 @@ namespace HashBoard
                 try
                 {
                     await Task.Delay(100 + (resumingAttempt * 250));
-                
-                    // Force an update of all entities immediately to ensure all panels have up-to-date state data
-                    await UpdateEntitiesSinceLastUpdate(default(DateTime));
-
-                    await Task.Delay(100 + (resumingAttempt * 250));
 
                     StartMqttSubscriber();
 
                     await Task.Delay(100 + (resumingAttempt * 250));
 
                     StartPollingThread();
+
+                    await Task.Delay(100 + (resumingAttempt * 250));
+
+                    // Force an update of all entities to ensure all panels have up-to-date state data
+                    await UpdateEntitiesSinceLastUpdate(default(DateTime));
 
                     doneResuming = true;
                 }
