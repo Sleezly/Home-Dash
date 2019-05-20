@@ -30,6 +30,11 @@ namespace Hashboard
                 return string.Empty;
             }
 
+            if (ServiceActionForSupportedFeatureMap.Count == 1)
+            {
+                return ServiceActionForSupportedFeatureMap.First().Value;
+            }
+
             // Get the ServiceActions currenlty supported and allowed by this device
             IEnumerable<KeyValuePair<uint, string>> serviceActions = ServiceActionForSupportedFeatureMap.Where(x => entity.HasSupportedFeatures(x.Key));
             if (!serviceActions.Any())
