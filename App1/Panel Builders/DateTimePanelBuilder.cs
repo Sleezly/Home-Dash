@@ -12,23 +12,27 @@ namespace HashBoard
 
         protected override Panel CreateSinglePanel(Entity entity, int width, int height)
         {
-            Grid grid = new Grid();
-            grid.Width = width;
-            grid.Height = height;
-            grid.Padding = new Thickness(PanelMargins);
+            Grid grid = new Grid
+            {
+                Width = width,
+                Height = height,
+                Padding = new Thickness(PanelMargins)
+            };
 
             DateTime dateTime = Convert.ToDateTime(entity.State);
 
-            TextBlock textBlock = new TextBlock();
-            textBlock.Foreground = FontColorBrush;
-            textBlock.FontWeight = FontWeights.Bold;
-            textBlock.FontSize = FontSize.HasValue ? FontSize.Value : base.FontSize;
-            textBlock.Text = dateTime.ToShortTimeString() + "\n\n" + dateTime.ToLongDateString();
-            textBlock.TextWrapping = TextWrapping.Wrap;
-            textBlock.HorizontalTextAlignment = TextAlignment.Center;
-            textBlock.HorizontalAlignment = HorizontalAlignment.Center;
-            textBlock.VerticalAlignment = VerticalAlignment.Center;
-            
+            TextBlock textBlock = new TextBlock
+            {
+                Foreground = FontColorBrush,
+                FontWeight = FontWeights.Bold,
+                FontSize = FontSize ?? base.FontSize,
+                Text = dateTime.ToShortTimeString() + "\n\n" + dateTime.ToLongDateString(),
+                TextWrapping = TextWrapping.Wrap,
+                HorizontalTextAlignment = TextAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
             grid.Children.Add(textBlock);
 
             return grid;

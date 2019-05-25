@@ -15,10 +15,12 @@ namespace HashBoard
             Uri imageUri = new Uri($"{UriAssetFormat}{asset}");
 
             BitmapImage bitmapImage = new BitmapImage(imageUri);
-            
-            Image image = new Image();
-            image.Source = bitmapImage;
-            
+
+            Image image = new Image
+            {
+                Source = bitmapImage
+            };
+
             return image;
         }
 
@@ -30,8 +32,10 @@ namespace HashBoard
 
             BitmapImage bitmapImage = new BitmapImage(imageUri);
 
-            ImageBrush imageBrush = new ImageBrush();
-            imageBrush.ImageSource = bitmapImage;
+            ImageBrush imageBrush = new ImageBrush
+            {
+                ImageSource = bitmapImage
+            };
 
             return imageBrush;
         }
@@ -51,8 +55,10 @@ namespace HashBoard
 
             BitmapImage bitmapImage = new BitmapImage(imageUri);
 
-            ImageBrush imageBrush = new ImageBrush();
-            imageBrush.ImageSource = bitmapImage;
+            ImageBrush imageBrush = new ImageBrush
+            {
+                ImageSource = bitmapImage
+            };
 
             return imageBrush;
         }
@@ -66,8 +72,10 @@ namespace HashBoard
 
             BitmapImage bitmapImage = new BitmapImage(imageUri);
 
-            ImageBrush imageBrush = new ImageBrush();
-            imageBrush.ImageSource = bitmapImage;
+            ImageBrush imageBrush = new ImageBrush
+            {
+                ImageSource = bitmapImage
+            };
 
             return imageBrush;
         }
