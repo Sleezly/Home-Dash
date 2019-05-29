@@ -11,7 +11,6 @@ using Windows.System.Display;
 using Windows.UI;
 using Windows.UI.Core;
 using Windows.UI.Input;
-using Windows.UI.Popups;
 using Windows.UI.Text;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -33,10 +32,8 @@ namespace HashBoard
         /// <summary>
         /// Built in panels which are always shown
         /// </summary>
-        private const string CustomgroupPanelName = "customstaticgroup";
-
+        private const string StaticGroupPanelName = "customstaticgroup";
         private const string SettingsControlPanelName = "settingscontrol";
-
         private const string ThemeControlMenuPanelName = "themecontrol";
 
         /// <summary>
@@ -46,18 +43,12 @@ namespace HashBoard
         private DateTime MousePressStartTime;
 
         /// <summary>
-        /// Polling thread cancellation token
-        /// </summary>
-        private CancellationTokenSource PollingThreadQuitCancellationToken;
-        private CancellationTokenSource PollingThreadResetTimerCancellationToken;
-
-        /// <summary>
         /// MQTT subscriber and worker cancellation tokens for event driven work requests
         /// </summary>
         private CancellationTokenSource EntityUpdateRequestedQuitCancellationToken;
         private CancellationTokenSource EntityUpdateRequestedWakeupCancellationToken;
 
-        private MqttSubscriber mqttSubscriber = new MqttSubscriber();
+        private readonly MqttSubscriber MqttSubscriber;
 
         /// <summary>
         /// Pxoximity sensors
@@ -113,73 +104,51 @@ namespace HashBoard
 
             LoadCustomEntityHandler();
 
-            StartPollingThread();
+            MqttSubscriber = new MqttSubscriber(OnEntityUpdated, OnMqttBrokerConnectionResult);
 
-            StartMqttSubscriber();
+            Task task = MqttSubscriber.Connect();
         }
 
+        /// <summary>
+        /// Global Exception Handler.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void CurrentDomain_UnhandledException(object sender, System.UnhandledExceptionEventArgs e)
         {
             Telemetry.TrackException(nameof(CurrentDomain_UnhandledException), e.ExceptionObject as Exception);
         }
 
+        /// <summary>
+        /// Global Exception Handler.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
         {
             Telemetry.TrackException(nameof(TaskScheduler_UnobservedTaskException), e.Exception);
         }
 
         /// <summary>
-        /// Resuming
+        /// Handles application resume lifetime event.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private async void App_Resuming(object sender, object e)
         {
             Telemetry.TrackEvent(nameof(App_Resuming));
-
-            bool doneResuming = false;
-            int resumingAttempt = 1;
-
-            await WebRequests.WaitForNetworkAvailable();
-
-            while (!doneResuming)
-            {
-                try
-                {
-                    await Task.Delay(100 + (resumingAttempt * 250));
-
-                    StartMqttSubscriber();
-
-                    await Task.Delay(100 + (resumingAttempt * 250));
-
-                    StartPollingThread();
-
-                    await Task.Delay(100 + (resumingAttempt * 250));
-
-                    // Force an update of all entities to ensure all panels have up-to-date state data
-                    await UpdateEntitiesSinceLastUpdate(default(DateTime));
-
-                    doneResuming = true;
-                }
-                catch (Exception ex)
-                {
-                    Telemetry.TrackException(nameof(App_Resuming), ex);
-                }
-            }
-
-            Telemetry.TrackTrace($"{nameof(App_Resuming)} done resuming. Took {resumingAttempt+1} attempts.");
+            await MqttSubscriber.Connect();
         }
 
         /// <summary>
-        /// Suspending
+        /// Handle application suspend lifetime event.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void App_Suspending(object sender, Windows.ApplicationModel.SuspendingEventArgs e)
+        private async void App_Suspending(object sender, Windows.ApplicationModel.SuspendingEventArgs e)
         {
             Telemetry.TrackEvent(nameof(App_Suspending));
-
-            DisconnectFromMqttBroker();
+            await MqttSubscriber.Disconnect();
         }
 
         /// <summary>
@@ -246,6 +215,10 @@ namespace HashBoard
             });
         }
         
+        /// <summary>
+        /// Generate the global panel definition handlers. This is what defines the behavior for 
+        /// each panel type.
+        /// </summary>
         private void LoadCustomEntityHandler()
         {
             CustomEntities = new List<PanelBuilderBase>()
@@ -416,16 +389,15 @@ namespace HashBoard
                         // Save application settings when closing the Settings popup
                         if ((popup.Child as SettingsControl).SaveSettings())
                         {
-                            // Settings value changed, so update frame and reconnect to MQTT broker
+                            // Settings value changed, so update frame, reconnect to MQTT and refresh al tiles
                             await LoadFrame();
 
-                            StartPollingThread();
+                            await MqttSubscriber.Connect();
 
-                            StartMqttSubscriber();
+                            await UpdateEntitiesSinceLastUpdate(default(DateTime));
                         }
                     }
-
-                    if (popup.Child is ThemeControl)
+                    else if (popup.Child is ThemeControl)
                     {
                         this.RequestedTheme = ThemeControl.GetApplicationTheme();
                     }
@@ -440,113 +412,6 @@ namespace HashBoard
                 };
 
                 popup.IsOpen = true;
-            }
-        }
-
-        /// <summary>
-        /// Shows an error meesage to the user.
-        /// </summary>
-        /// <param name="title"></param>
-        /// <param name="message"></param>
-        private async void ShowErrorDialog(string title, string message)
-        {
-            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
-            {
-                MessageDialog dialog = new MessageDialog(message, title);
-
-                await dialog.ShowAsync();
-            });
-        }
-
-        /// <summary>
-        /// Application settings update
-        /// </summary>
-        private void StartPollingThread()
-        {
-            if (SettingsControl.HomeAssistantPollingInterval == default(TimeSpan))
-            {
-                if (PollingThreadQuitCancellationToken != null)
-                {
-                    Telemetry.TrackTrace($"{nameof(StartPollingThread)} stopping polling thread as polling interval is set to zero.");
-
-                    PollingThreadQuitCancellationToken.Cancel();
-                }
-                else
-                {
-                    Telemetry.TrackTrace($"{nameof(StartPollingThread)} no polling thread as polling interval is not set.");
-                }
-            }
-            else
-            {
-                if (PollingThreadQuitCancellationToken != null)
-                {
-                    Telemetry.TrackTrace($"{nameof(StartPollingThread)} polling thread is already active.");
-                }
-                else
-                {
-                    Telemetry.TrackTrace($"{nameof(StartPollingThread)} polling thread is starting.");
-
-                    // Kick off the polling thread
-                    PollingThreadQuitCancellationToken = new CancellationTokenSource();
-                    Task.Factory.StartNew(PeriodicMqttHealthCheckPollingThread, PollingThreadQuitCancellationToken.Token);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Starts the MQTT subscriber when needed.
-        /// </summary>
-        private async void StartMqttSubscriber()
-        {
-            if (string.IsNullOrEmpty(SettingsControl.MqttBrokerHostname))
-            {
-                Telemetry.TrackTrace($"{nameof(StartMqttSubscriber)} no MQTT subscriber as no MQTT broker hostname is set.");
-                return;
-            }
-
-            if (mqttSubscriber.IsSubscribed)
-            {
-                Telemetry.TrackTrace($"{nameof(StartMqttSubscriber)} is already connected to MQTT.");
-                return;
-            }
-
-            Telemetry.TrackTrace($"{nameof(StartMqttSubscriber)} attempting to connect to MQTT broker.");
-
-            await WebRequests.WaitForNetworkAvailable();
-
-            mqttSubscriber.Connect(OnEntityUpdated, OnMqttBrokerConnectionResult);
-        }
-
-        /// <summary>
-        /// Handle MQTT Broker connection attmpts with failure message prompts for the user.
-        /// </summary>
-        /// <param name="connectionResponse"></param>
-        private async void OnMqttBrokerConnectionResult(byte connectionResponse)
-        {
-            switch (connectionResponse)
-            {
-                case MqttSubscriber.MqttConnectionSuccess:
-                    Telemetry.TrackTrace($"{nameof(OnMqttBrokerConnectionResult)} successfully subscribed to MQTT brodker '{SettingsControl.MqttBrokerHostname}'.");
-
-                    // Connected successfully. Start the MQTT response receiver thread which will process the MQTT events.
-                    EntityUpdateRequestedQuitCancellationToken = new CancellationTokenSource();
-                    await Task.Factory.StartNew(MqttEntityUpdateRequestedResponseThread, EntityUpdateRequestedQuitCancellationToken.Token);
-                    break;
-
-                case MqttSubscriber.MqttConnectionException:
-                    Telemetry.TrackTrace($"{nameof(OnMqttBrokerConnectionResult)} encountered exception while attempting to connect to '{SettingsControl.MqttBrokerHostname}'. Retrying.");
-
-                    // Failed to connect. This typically means we (the client) were not yet ready to start the subscriber or did not cleanup a previous connection
-                    // after a suspend/resume sequence of events. So, wait a little bit and try again. Ugh.
-                    await Task.Delay(100);
-                    StartMqttSubscriber();
-                    break;
-
-                default:
-                    // Standard MQTT error, such as bad user name/password or invalid broker IP address. Inform user.
-                    ShowErrorDialog("MQTT Broker", $"Failed to connect to MQTT broker '{SettingsControl.MqttBrokerHostname}'. " +
-                        $"Got MQTT response code: {connectionResponse}. {mqttSubscriber.Status}");
-                    break;
             }
         }
 
@@ -687,7 +552,7 @@ namespace HashBoard
         }
 
         /// <summary>
-        /// Send data request to Home Assistant against to the provided service.
+        /// Send data request to Home Assistant to the requested service.
         /// </summary>
         /// <param name="panel"></param>
         /// <param name="panelData"></param>
@@ -796,6 +661,11 @@ namespace HashBoard
             });
         }
 
+        /// <summary>
+        /// Refreshes all panels which have updated after the provided time.
+        /// </summary>
+        /// <param name="lastUpdatedTime"></param>
+        /// <returns></returns>
         private async Task<DateTime> UpdateEntitiesSinceLastUpdate(DateTime lastUpdatedTime)
         {   
             // Get all entities not just the entities we think we want
@@ -834,6 +704,26 @@ namespace HashBoard
             }
 
             return lastUpdatedTime;
+        }
+
+        /// <summary>
+        /// Handle the MQTT Broker subscription connection response.
+        /// </summary>
+        /// <param name="isConnected"></param>
+        private async void OnMqttBrokerConnectionResult(bool isConnected)
+        {
+            if (isConnected)
+            {
+                // Connected successfully. Start the MQTT response receiver thread which will process the MQTT events.
+                EntityUpdateRequestedQuitCancellationToken = new CancellationTokenSource();
+                await Task.Factory.StartNew(MqttEntityUpdateRequestedResponseThread, EntityUpdateRequestedQuitCancellationToken.Token);
+            }
+            else
+            {
+                // Retry after a short delay.
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                await MqttSubscriber.Connect();
+            }
         }
 
         /// <summary>
@@ -884,73 +774,6 @@ namespace HashBoard
             }
 
             Telemetry.TrackTrace($"{nameof(MqttEntityUpdateRequestedResponseThread)} is now terminating.");
-        }
-
-        /// <summary>
-        /// Polling thread. Reconnects the MQTT broker if it was found to be in a disconnected state.
-        /// </summary>
-        private async void PeriodicMqttHealthCheckPollingThread()
-        {
-            Telemetry.TrackTrace($"{nameof(PeriodicMqttHealthCheckPollingThread)} is starting.");
-
-            if (PollingThreadQuitCancellationToken == null)
-            {
-                throw new ArgumentException($"{nameof(PollingThreadQuitCancellationToken)} cancellation token was not set by caller.");
-            }
-
-            PollingThreadResetTimerCancellationToken = new CancellationTokenSource();
-
-            // Infinite loop until told to stop
-            while (!PollingThreadQuitCancellationToken.IsCancellationRequested)
-            {
-                await Task.Delay(SettingsControl.HomeAssistantPollingInterval, PollingThreadResetTimerCancellationToken.Token).ContinueWith(tsk => { });
-
-                Telemetry.TrackTrace($"{nameof(PeriodicMqttHealthCheckPollingThread)} now processing.");
-
-                if (!PollingThreadResetTimerCancellationToken.IsCancellationRequested)
-                {
-                    await ResubscribeToMqttBrokerIfNeeded();
-                }
-            }
-
-            PollingThreadQuitCancellationToken = null;
-            PollingThreadResetTimerCancellationToken = null;
-
-            Telemetry.TrackTrace($"{nameof(PeriodicMqttHealthCheckPollingThread)} now terminating.");
-        }
-
-        /// <summary>
-        /// Checks if we are still subscribed to MQTT topic and if not, attempt to reconnect.
-        /// </summary>
-        private async Task ResubscribeToMqttBrokerIfNeeded()
-        {
-            // Make sure our MQTT broker is connected if expected
-            if (!string.IsNullOrEmpty(SettingsControl.MqttBrokerHostname))
-            {
-                if (!mqttSubscriber.IsSubscribed)
-                {
-                    Telemetry.TrackTrace($"{nameof(ResubscribeToMqttBrokerIfNeeded)} found unexpected MQTT disconnect. Attempting to reconnect.");
-
-                    // Force an update of all entities immediately to ensure all panels have up-to-date state data
-                    await UpdateEntitiesSinceLastUpdate(default(DateTime));
-
-                    StartMqttSubscriber();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Disconnect from the MQTT broker.
-        /// </summary>
-        private void DisconnectFromMqttBroker()
-        {
-            if (!string.IsNullOrEmpty(SettingsControl.MqttBrokerHostname))
-            {
-                mqttSubscriber.Disconnect();
-
-                PollingThreadQuitCancellationToken?.Cancel();
-                PollingThreadResetTimerCancellationToken?.Cancel();
-            }
         }
 
         /// <summary>
@@ -1069,12 +892,12 @@ namespace HashBoard
             // Create the custom group to hold the panel
             Entity view = new Entity()
             {
-                EntityId = $"group.{CustomgroupPanelName}",
+                EntityId = $"group.{StaticGroupPanelName}",
                 LastChanged = DateTime.Now,
                 LastUpdated = DateTime.Now,
                 State = "off",
                 Attributes = new Dictionary<string, dynamic>() {
-                    { "friendly_name", CustomgroupPanelName },
+                    { "friendly_name", StaticGroupPanelName },
                     { "entity_id", childrenEntities.Select(x => x.EntityId).ToList() },
                     { "order", 999 },
                     { "view", true },

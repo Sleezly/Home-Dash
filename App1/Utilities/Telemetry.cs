@@ -7,15 +7,15 @@ namespace Hashboard
 {
     public static class Telemetry
     {
-        public static void TrackEvent(string key, Dictionary<string, string> properties = null)
+        public static void TrackEvent(string key, IDictionary<string, string> properties = null)
         {
-            Debug.WriteLine($"{key} {properties?.ToString()}");
+            Debug.WriteLine($"{key} {(null != properties ? string.Join(", ", properties) : string.Empty)}");
             HockeyClient.Current.TrackEvent(key, properties);
         }
 
-        public static void TrackTrace(string message, Dictionary<string, string> properties = null)
+        public static void TrackTrace(string message, IDictionary<string, string> properties = null)
         {
-            Debug.WriteLine($"{message} {properties?.ToString()}");
+            Debug.WriteLine($"{message} {(null != properties ? string.Join(", ", properties) : string.Empty)}");
         }
 
         public static void TrackException(string method, Exception ex)
@@ -23,7 +23,7 @@ namespace Hashboard
             if (null != ex)
             {
                 HockeyClient.Current.TrackException(ex);
-                HockeyClient.Current.TrackEvent(method, ex.ToDictionary());
+                HockeyClient.Current.TrackEvent($"Exception: {method}", ex.ToDictionary());
             }
             else
             {

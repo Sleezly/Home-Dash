@@ -1,115 +1,149 @@
 ﻿using Hashboard;
+using MQTTnet;
+using MQTTnet.Client;
+using MQTTnet.Client.Options;
+using MQTTnet.Client.Subscribing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using uPLibrary.Networking.M2Mqtt;
-using uPLibrary.Networking.M2Mqtt.Messages;
 
 namespace HashBoard
 {
     public class MqttSubscriber
     {
-        private MqttClient client;
-
+        /// <summary>
+        /// Callback delegate definitions.
+        /// </summary>
         public delegate void OnEntityUpdated();
-        public delegate void OnConnectionResult(byte connectionResponse);
+        public delegate void OnConnectionResult(bool isConnected);
 
-        private OnEntityUpdated EntityUpdatedCallback { get; set; }
+        private readonly OnEntityUpdated OnEntityUpdatedCallback;
+        private readonly OnConnectionResult OnConnectionResultCallback;
 
-        private OnConnectionResult OnConnectCallback { get; set; }
+        /// <summary>
+        /// MQTT Client.
+        /// </summary>
+        private readonly MqttFactory MqttFactory;
+        private readonly IMqttClient MqttClient;
 
-        private readonly Dictionary<byte, string> ConnackResponseCodes = new Dictionary<byte, string>()
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        public MqttSubscriber(OnEntityUpdated onEntityUpdatedCallback, OnConnectionResult onConnectionResultCallback)
         {
-            { MqttConnectionSuccess, "Connection accepted." },
-            { 1, "The Server does not support the level of the MQTT protocol requested by the Client." },
-            { 2, "The Client identifier is correct UTF-8 but not allowed by the Server." },
-            { 3, "The Network Connection has been made but the MQTT service is unavailable." },
-            { 4, "The data in the user name or password is malformed." },
-            { 5, "The Client is not authorized to connect." },
-            { MqttConnectionException, string.Empty },
-        };
+            MqttFactory = new MqttFactory();
+            MqttClient = MqttFactory.CreateMqttClient();
 
-        public const byte MqttConnectionSuccess = 0;
-        public const byte MqttConnectionException = 255;
+            OnEntityUpdatedCallback = onEntityUpdatedCallback ?? throw new ArgumentNullException(nameof(onEntityUpdatedCallback));
+            OnConnectionResultCallback = onConnectionResultCallback ?? throw new ArgumentNullException(nameof(onConnectionResultCallback));
 
-        public bool IsSubscribed{ get { return client != null && client.IsConnected; } } 
-        public string Status { get; set; }
+            // Handle message received callbacks
+            MqttClient.UseApplicationMessageReceivedHandler(e =>
+            {
+                string entityId = $"{e.ApplicationMessage.Topic.Split('/')[1]}.{e.ApplicationMessage.Topic.Split('/')[2]}";
 
-        public MqttSubscriber()
-        {
-            Status = "No connection has been attempted.";
+                Telemetry.TrackTrace(
+                    nameof(MqttClient.ApplicationMessageReceivedHandler),
+                    new Dictionary<string, string>
+                    {
+                        [nameof(Entity.EntityId)] = entityId,
+                    });
+
+                OnEntityUpdatedCallback();
+            });
+
+            // Handle subscription connection
+            MqttClient.UseConnectedHandler(async e =>
+            {
+                MqttClientSubscribeResult result = await MqttClient.SubscribeAsync(new TopicFilterBuilder()
+                    .WithTopic(SettingsControl.MqttTopic)
+                    .Build());
+
+                Telemetry.TrackEvent(
+                    nameof(MqttClient.ConnectedHandler), 
+                    new Dictionary<string, string>
+                    {
+                        [nameof(MqttClient.IsConnected)] = MqttClient.IsConnected.ToString(),
+                        [nameof(MqttClientSubscribeResultCode)] = result.Items.FirstOrDefault()?.ResultCode.ToString(),
+                    });
+
+                OnConnectionResultCallback(MqttClient.IsConnected);
+            });
+
+            // Handle disconnects
+            MqttClient.UseDisconnectedHandler(async e =>
+            {
+                Telemetry.TrackEvent(
+                    nameof(MqttClient.DisconnectedHandler),
+                    new Dictionary<string, string>(e.ToDictionary())
+                    {
+                        [nameof(MqttClient.IsConnected)] = MqttClient.IsConnected.ToString(),
+                    });
+
+                await Task.Delay(TimeSpan.FromSeconds(1));
+
+                await Connect();
+            });
         }
 
         /// <summary>
         /// Attempt to connect and subscribe to the MQTT broker.
         /// </summary>
         /// <param name="entities"></param>
-        public void Connect(OnEntityUpdated onEntityUpdatedCallback, OnConnectionResult onConnectionResultCallback)
+        public async Task Connect()
         {
-            if (IsSubscribed)
+            if (string.IsNullOrEmpty(SettingsControl.MqttUsername))
             {
-                return;
+                throw new ArgumentNullException(nameof(SettingsControl.MqttUsername));
             }
 
-            EntityUpdatedCallback = onEntityUpdatedCallback;
-            OnConnectCallback = onConnectionResultCallback;
-
-            Task.Factory.StartNew(() =>
+            if (string.IsNullOrEmpty(SettingsControl.MqttPassword))
             {
-                byte response = 255;
+                throw new ArgumentNullException(nameof(SettingsControl.MqttPassword));
+            }
+
+            if (string.IsNullOrEmpty(SettingsControl.MqttBrokerHostname))
+            {
+                throw new ArgumentNullException(nameof(SettingsControl.MqttBrokerHostname));
+            }
+
+            // Create TCP-based connection options
+            IMqttClientOptions mqttClientOptions = new MqttClientOptionsBuilder()
+                .WithTcpServer(SettingsControl.MqttBrokerHostname)
+                .WithCredentials(SettingsControl.MqttUsername, SettingsControl.MqttPassword)
+                .WithCleanSession()
+                .Build();
+
+            await WebRequests.WaitForNetworkAvailable();
+
+            while (!MqttClient.IsConnected)
+            {
                 try
                 {
-                    client = new MqttClient(SettingsControl.MqttBrokerHostname);
-
-                    client.MqttMsgPublishReceived += OnMessageReceviedWorker;
-
-                    response = client.Connect(Guid.NewGuid().ToString(), SettingsControl.MqttUsername, SettingsControl.MqttPassword);
-
-                    if (response == 0)
-                    {
-                        client.Subscribe(new string[] { SettingsControl.MqttStateStream }, new byte[] { 2 });
-                    }
-
-                    Status = ConnackResponseCodes[response];
+                    await MqttClient.ConnectAsync(mqttClientOptions);
                 }
                 catch (Exception e)
                 {
-                    Status = e.Message;
-                }
-                finally
-                {
-                    Telemetry.TrackEvent(nameof(Connect), new Dictionary<string, string>(client.ToDictionary()) { [nameof(Status)] = Status });
+                    Telemetry.TrackException(nameof(Connect), e);
 
-                    OnConnectCallback(response);
+                    await Task.Delay(TimeSpan.FromSeconds(1));
                 }
-            });
+            }
         }
 
         /// <summary>
         /// Disconnect from the MQTT broker.
         /// </summary>
         /// <param name="entities"></param>
-        public void Disconnect()
+        public async Task Disconnect()
         {
-            if (IsSubscribed)
+            if (MqttClient.IsConnected)
             {
-                client.Disconnect();
+                MqttClient.DisconnectedHandler = null;
+
+                await MqttClient.DisconnectAsync();
             }
-        }
-
-        /// <summary>
-        /// MQTT subscriber event notification received callback.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void OnMessageReceviedWorker(object sender, MqttMsgPublishEventArgs e)
-        {
-            //string message = Encoding.UTF8.GetString(e.Message);
-            string entityId = $"{e.Topic.Split('/')[1]}.{e.Topic.Split('/')[2]}";
-            System.Diagnostics.Debug.WriteLine($"MQTT: {entityId}");
-
-            EntityUpdatedCallback();
         }
     }
 }

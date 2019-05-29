@@ -50,10 +50,10 @@ namespace Hashboard
                 PasswordBox mqttPassword = this.FindName("MqttPasswordText") as PasswordBox;
                 mqttPassword.Password = MqttPassword;
             }
-            if (null != MqttStateStream)
+            if (null != MqttTopic)
             {
                 TextBox mqttStateStream = this.FindName("MqttStateStreamText") as TextBox;
-                mqttStateStream.Text = MqttStateStream;
+                mqttStateStream.Text = MqttTopic;
             }
         }
 
@@ -80,7 +80,7 @@ namespace Hashboard
             settingsChanged |= (MqttBrokerHostname != mqttBrokerHostname.Text);
             settingsChanged |= (MqttUsername != mqttUsername.Text);
             settingsChanged |= (MqttPassword != mqttPassword.Password);
-            settingsChanged |= (MqttStateStream != mqttStateStream.Text);
+            settingsChanged |= (MqttTopic != mqttStateStream.Text);
 
             HttpProtocol = homeAssistantProtocol.Text;
             HomeAssistantHostname = homeAssistantHostname.Text;
@@ -89,7 +89,7 @@ namespace Hashboard
             MqttBrokerHostname = mqttBrokerHostname.Text;
             MqttUsername = mqttUsername.Text;
             MqttPassword = mqttPassword.Password;
-            MqttStateStream = mqttStateStream.Text;
+            MqttTopic = mqttStateStream.Text;
 
             return settingsChanged;
         }
@@ -213,7 +213,7 @@ namespace Hashboard
         /// <summary>
         /// Topic name for the MQTT state stream. Typically this is 'homeassistant/#'.
         /// </summary>
-        public static string MqttStateStream
+        public static string MqttTopic
         {
             get
             {

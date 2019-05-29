@@ -13,19 +13,17 @@ namespace HashBoard
     {
         private const string ApiPassword = "api_password";
 
+        /// <summary>
+        /// Waits for the network connection to become available.
+        /// </summary>
+        /// <returns></returns>
         public static async Task WaitForNetworkAvailable()
         {
-            const uint maxRetries = 5;
-
-            // Wait for network connection to be available
-            int attempt = 0;
-            while (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable() && attempt < maxRetries)
+            while (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
             {
-                Telemetry.TrackTrace($"{nameof(GetData)} no network connection availalbe. Attempt [{attempt}]. Time {DateTime.Now}.");
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
 
-                await Task.Delay(100 + (attempt * 250));
-
-                attempt++;
+                Telemetry.TrackEvent(nameof(WaitForNetworkAvailable));
             }
         }
 
@@ -44,9 +42,9 @@ namespace HashBoard
                 try
                 {
                     HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(uri);
-                    var response = (HttpWebResponse)await Task.Factory.FromAsync<WebResponse>(request.BeginGetResponse, request.EndGetResponse, null);
+                    WebResponse webResponse = (HttpWebResponse)await Task.Factory.FromAsync<WebResponse>(request.BeginGetResponse, request.EndGetResponse, null);
 
-                    Stream stream = response.GetResponseStream();
+                    Stream stream = webResponse.GetResponseStream();
 
                     StreamReader strReader = new StreamReader(stream);
                     string text = await strReader.ReadToEndAsync();
