@@ -84,7 +84,7 @@ namespace Hashboard
 
             deviceName.Text = ClimateEntity.Attributes["friendly_name"].ToUpper();
             currentTemperature.Text = $"ACTUAL: {ClimateEntity.Attributes["current_temperature"]}";
-            targetTemperature.Text = $"{ClimateEntity.Attributes["temperature"]}";
+            targetTemperature.Text = $"{ClimateEntity.Attributes["temperature"] ?? ClimateEntity.State}";
 
             // Operation drop-down
             ComboBox comboOperation = this.FindName("ComboOperation") as ComboBox;
