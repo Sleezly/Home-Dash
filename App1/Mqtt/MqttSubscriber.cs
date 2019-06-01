@@ -28,6 +28,12 @@ namespace HashBoard
         private readonly IMqttClient MqttClient;
 
         /// <summary>
+        /// Expected connection state. Used to determine if a disconnected session should attempt to reconnect
+        /// when a disconnect occurs.
+        /// </summary>
+        private bool AttemptReconnectOnDisconnect = false;
+
+        /// <summary>
         /// Constructor.
         /// </summary>
         public MqttSubscriber(OnEntityUpdated onEntityUpdatedCallback, OnConnectionResult onConnectionResultCallback)
@@ -74,16 +80,20 @@ namespace HashBoard
             // Handle disconnects
             MqttClient.UseDisconnectedHandler(async e =>
             {
-                Telemetry.TrackEvent(
-                    nameof(MqttClient.DisconnectedHandler),
-                    new Dictionary<string, string>(e.ToDictionary())
-                    {
-                        [nameof(MqttClient.IsConnected)] = MqttClient.IsConnected.ToString(),
-                    });
+                // Only attempt to reconnect when desired
+                if (AttemptReconnectOnDisconnect)
+                {
+                    Telemetry.TrackEvent(
+                        nameof(MqttClient.DisconnectedHandler),
+                        new Dictionary<string, string>(e.ToDictionary())
+                        {
+                            [nameof(MqttClient.IsConnected)] = MqttClient.IsConnected.ToString(),
+                        });
 
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                    await Task.Delay(TimeSpan.FromSeconds(1));
 
-                await Connect();
+                    await Connect();
+                }
             });
         }
 
@@ -117,6 +127,9 @@ namespace HashBoard
 
             await WebRequests.WaitForNetworkAvailable();
 
+            // If we disconnect for any reason, attempt to reconnect
+            AttemptReconnectOnDisconnect = true;
+
             while (!MqttClient.IsConnected)
             {
                 try
@@ -138,10 +151,11 @@ namespace HashBoard
         /// <param name="entities"></param>
         public async Task Disconnect()
         {
+            // Do not attempt to reconnect when we disconnect
+            AttemptReconnectOnDisconnect = false;
+
             if (MqttClient.IsConnected)
             {
-                MqttClient.DisconnectedHandler = null;
-
                 await MqttClient.DisconnectAsync();
             }
         }
