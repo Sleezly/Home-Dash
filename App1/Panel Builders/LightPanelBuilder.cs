@@ -1,6 +1,7 @@
 ﻿using Hashboard;
 using Microsoft.Toolkit.Uwp.UI.Controls;
 using System.Collections.Generic;
+using System.Linq;
 using Windows.UI.Text;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -24,20 +25,22 @@ namespace HashBoard
 
         protected override Panel CreateGroupPanel(Entity entity, IEnumerable<Entity> childrenEntities, int width, int height)
         {
-            List<RGB> rgbList = new List<RGB>();
-
-            foreach (Entity childEntity in childrenEntities)
-            {
-                if (childEntity.State == "on")
-                {
-                    rgbList.Add(childEntity.GetColor());
-                }
-            }
-
+            IEnumerable<RGB> colorsRgb = childrenEntities.Where(x => !x.IsInOffState()).Select(x => x.GetColorRgb()).Where(x => x != null);
+            IEnumerable<RGB> colorsTemperature = childrenEntities.Where(x => !x.IsInOffState()).Select(x => x.GetColorRgb()).Where(x => x != null);
+            
             SolidColorBrush backgroundBrush = null;
-            if (rgbList.Count > 0)
+
+            if (colorsRgb.Any())
             {
-                backgroundBrush = RGB.Average(rgbList).CreateSolidColorBrush();
+                backgroundBrush = RGB.Average(colorsRgb).CreateSolidColorBrush();
+            }
+            else if (colorsTemperature.Any())
+            {
+                backgroundBrush = RGB.Average(colorsTemperature).CreateSolidColorBrush();
+            }
+            else
+            {
+                backgroundBrush = entity.GetColorDefault().CreateSolidColorBrush();
             }
 
             return CreatePanel(entity, width, height, backgroundBrush);
@@ -45,22 +48,25 @@ namespace HashBoard
 
         private Panel CreatePanel(Entity entity, int width, int height, SolidColorBrush backgroundBrush)
         {
-            DockPanel panel = new DockPanel();
-            panel.Width = width;
-            panel.Height = height;
-            panel.Padding = new Thickness(PanelMargins);
-            panel.Background = backgroundBrush;
+            DockPanel panel = new DockPanel
+            {
+                Width = width,
+                Height = height,
+                Padding = new Thickness(PanelMargins),
+                Background = backgroundBrush
+            };
 
-            TextBlock textBlock = new TextBlock();
-            textBlock.Foreground = FontColorBrush;
-            textBlock.FontWeight = FontWeights.Bold;
-            textBlock.FontSize = FontSize;
-            textBlock.Text = entity.Attributes["friendly_name"] ?? string.Empty;
-            textBlock.TextWrapping = TextWrapping.Wrap;
-            textBlock.TextAlignment = TextAlignment.Center;
-            textBlock.HorizontalAlignment = HorizontalAlignment.Center;
-            textBlock.VerticalAlignment = VerticalAlignment.Center;
-            textBlock.FontSize = FontSize;
+            TextBlock textBlock = new TextBlock
+            {
+                Foreground = FontColorBrush,
+                FontWeight = FontWeights.Bold,
+                FontSize = FontSize,
+                Text = entity.Attributes["friendly_name"] ?? string.Empty,
+                TextWrapping = TextWrapping.Wrap,
+                TextAlignment = TextAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
 
             panel.Children.Add(textBlock);
 

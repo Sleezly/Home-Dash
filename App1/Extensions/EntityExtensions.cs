@@ -36,6 +36,14 @@ namespace Hashboard
         /// <returns></returns>
         public static RGB GetColor(this Entity entity)
         {
+            return 
+                entity.GetColorRgb() ?? 
+                entity.GetColorTemperature() ??
+                entity.GetColorDefault();
+        }
+
+        public static RGB GetColorRgb(this Entity entity)
+        {
             if (entity.Attributes.ContainsKey("rgb_color"))
             {
                 byte r = Convert.ToByte(entity.Attributes["rgb_color"][0]);
@@ -44,16 +52,25 @@ namespace Hashboard
 
                 return new RGB(r, g, b);
             }
-            else if (entity.Attributes.ContainsKey("color_temp"))
+
+            return null;
+        }
+
+        public static RGB GetColorTemperature(this Entity entity)
+        {
+            if (entity.Attributes.ContainsKey("color_temp"))
             {
                 int colorTemperature = Convert.ToInt32(entity.Attributes["color_temp"]);
                 return ColorConverter.MiredToRGB(colorTemperature);
             }
-            else
-            {
-                // Default to 2700 Kelvin
-                return ColorConverter.MiredToRGB(370);
-            }
+
+            return null;
+        }
+
+        public static RGB GetColorDefault(this Entity entity)
+        {
+            // Default to 2700 Kelvin
+            return ColorConverter.MiredToRGB(370);
         }
 
         /// <summary>
