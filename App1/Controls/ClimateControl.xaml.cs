@@ -39,38 +39,28 @@ namespace Hashboard
         {
             LinearGradientBrush lgb = new LinearGradientBrush();
 
-            if (entity.Attributes.ContainsKey("operation_mode"))
+            switch (entity.State.ToLowerInvariant())
             {
-                switch (entity.Attributes["operation_mode"] as string)
-                {
-                    case "off":
-                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGray, Offset = 0 });
-                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.Gray, Offset = 1 });
-                        break;
+                case "off":
+                case "eco":
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGreen, Offset = 0 });
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.Green, Offset = 1 });
+                    break;
 
-                    case "eco":
-                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGreen, Offset = 0 });
-                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.Green, Offset = 1 });
-                        break;
+                case "heat":
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.Orange, Offset = 0 });
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.OrangeRed, Offset = 1 });
+                    break;
 
-                    case "heat":
-                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.Orange, Offset = 0 });
-                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.OrangeRed, Offset = 1 });
-                        break;
+                case "cool":
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightSkyBlue, Offset = 0 });
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightCyan, Offset = 1 });
+                    break;
 
-                    case "cool":
-                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightSkyBlue, Offset = 0 });
-                        lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightCyan, Offset = 1 });
-                        break;
-
-                    default:
-                        throw new ArgumentOutOfRangeException($"Unhandled climate operation mode '{entity.Attributes["operation_mode"]}'.");
-                }
-            }
-            else
-            {
-                lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGray, Offset = 0 });
-                lgb.GradientStops.Add(new GradientStop() { Color = Colors.DarkGray, Offset = 1 });
+                default:
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.LightGray, Offset = 0 });
+                    lgb.GradientStops.Add(new GradientStop() { Color = Colors.Gray, Offset = 1 });
+                    break;
             }
 
             return lgb;
@@ -91,12 +81,19 @@ namespace Hashboard
             comboOperation.SelectionChanged -= ComboOperation_SelectionChanged;
             comboOperation.Items.Clear();
 
-            foreach (string item in ClimateEntity.Attributes["operation_list"])
+            if (ClimateEntity.Attributes["hvac_modes"] is Newtonsoft.Json.Linq.JArray)
             {
-                comboOperation.Items.Add(item);
+                foreach (string item in ClimateEntity.Attributes["hvac_modes"])
+                {
+                    comboOperation.Items.Add(item);
+                }
+            }
+            else
+            {
+                comboOperation.Items.Add(ClimateEntity.Attributes["hvac_modes"]);
             }
 
-            comboOperation.SelectedItem = ClimateEntity.Attributes["operation_mode"] as string;
+            comboOperation.SelectedItem = ClimateEntity.State;
             comboOperation.SelectionChanged += ComboOperation_SelectionChanged;
 
             // Fan Mode drop-down
@@ -104,7 +101,7 @@ namespace Hashboard
             comboFanMode.SelectionChanged -= ComboFanMode_SelectionChanged;
             comboFanMode.Items.Clear();
 
-            foreach (string item in ClimateEntity.Attributes["fan_list"])
+            foreach (string item in ClimateEntity.Attributes["fan_modes"])
             {
                 comboFanMode.Items.Add(item);
             }
@@ -170,11 +167,11 @@ namespace Hashboard
         {
             ComboBox comboBox = sender as ComboBox;
 
-            ClimateEntity.Attributes["operation_mode"] = comboBox.SelectedItem.ToString();
+            ClimateEntity.Attributes["hvac_modes"] = comboBox.SelectedItem.ToString();
 
-            WebRequests.SendAction("climate", "set_operation_mode", new Dictionary<string, string>() {
+            WebRequests.SendAction("climate", "set_hvac_mode", new Dictionary<string, string>() {
                 { "entity_id", ClimateEntity.EntityId },
-                { "operation_mode", comboBox.SelectedItem.ToString() },
+                { "hvac_mode", comboBox.SelectedItem.ToString() },
             });
 
             SetEllipse();
