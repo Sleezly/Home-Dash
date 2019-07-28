@@ -793,7 +793,7 @@ namespace HashBoard
                 entities = await WebRequests.GetData();
             }
 
-            scrollViewer.Content = CreateViews(entities);
+            scrollViewer.Content = CreateViews(entities ?? new List<Entity>());
 
             // By setting a center horizontal aligntment we trim off the edges so that the dead space around
             // the left and right edges of the screen will render black. This only works well when there's 
@@ -948,48 +948,49 @@ namespace HashBoard
                 HorizontalAlignment = HorizontalAlignment.Center
             };
 
-            if (null != allEntities)
-            {
-                // Get all home assistant "group" entities which have the "view=true" attribute set in customizations.yaml
-                List<Entity> entityHeaders = allEntities.Where(group => group.Attributes.ContainsKey("view")).ToList();
-
-                // Supply a default group view header if none was provided (i.e. groups.yaml is empty)
-                if (!entityHeaders.Any())
-                {
-                    Entity defaultEntity = new Entity
-                    {
-                        EntityId = "group.default_view",
-                        Attributes = new Dictionary<string, dynamic>()
-                        {
-                            ["entity_id"] = allEntities.Select(x => x.EntityId),
-                            ["friendly_name"] = "Default",
-                        }
-                    };
-
-                    entityHeaders.Add(defaultEntity);
-                }
-
-                // Add all single and group entities which are tied to each view
-                foreach (Entity entityHeader in entityHeaders)
-                {
-                    stackPanel.Children.Add(CreateHeaderTextBlockForGoupViewEntity(entityHeader));
-                    stackPanel.Children.Add(CreateEntitiesInView(entityHeader, allEntities));
-                }
-
-                // Only add a header if we loaded user content as well
-                Entity setupViewEntity = new Entity() { Attributes = new Dictionary<string, dynamic>() {
-                    { "friendly_name", "settings" },
-                    { "view", "yes" } } };
-
-                stackPanel.Children.Add(CreateHeaderTextBlockForGoupViewEntity(setupViewEntity));
-            }
-
-            // Add the setup panels
+            // Prepare the default omnipresent settings and setup panels
             Entity settingsEntity = CreateCustomStaticPanel(SettingsControlPanelName, "panel-settings.png");
             Entity themeEntity = CreateCustomStaticPanel(ThemeControlMenuPanelName, "panel-paintbrush.png");
-            WrapPanel customWrapPanel = CreateCustomGroupPanel(new List<Entity>() { settingsEntity, themeEntity });
 
-            stackPanel.Children.Add(customWrapPanel);
+            // Add the default panels to the entity list
+            allEntities = allEntities.
+                Append(settingsEntity).
+                Append(themeEntity);
+
+            // Retrieve the Settings group, if present
+            Entity settingsGroupEntity = allEntities.SingleOrDefault(x => x.EntityId.Equals("group.settings"));
+
+            // When no Settings group is provided, create it
+            if (null == settingsGroupEntity)
+            {
+                settingsGroupEntity = new Entity
+                {
+                    EntityId = "group.settings",
+                    Attributes = new Dictionary<string, dynamic>()
+                    {
+                        { "entity_id", new Newtonsoft.Json.Linq.JArray() },
+                        { "friendly_name", "settings" },
+                        { "view", "yes" }
+                    },
+                };
+
+                // Add the new Settings group to the entity list
+                allEntities = allEntities.Append(settingsGroupEntity);
+            }
+
+            // Add the default panels to the Settings group
+            settingsGroupEntity.Attributes["entity_id"].AddFirst(themeEntity.EntityId);
+            settingsGroupEntity.Attributes["entity_id"].AddFirst(settingsEntity.EntityId);
+
+            // Get all home assistant "group" entities which have the "view=true" attribute set in customizations.yaml
+            List<Entity> entityHeaders = allEntities.Where(group => group.Attributes.ContainsKey("view")).ToList();
+
+            // Add all single and group entities which are tied to each view
+            foreach (Entity entityHeader in entityHeaders)
+            {
+                stackPanel.Children.Add(CreateHeaderTextBlockForGoupViewEntity(entityHeader));
+                stackPanel.Children.Add(CreateEntitiesInView(entityHeader, allEntities));
+            }
 
             return stackPanel;
         }
