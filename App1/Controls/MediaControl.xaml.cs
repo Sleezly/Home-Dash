@@ -14,7 +14,7 @@ namespace Hashboard
 {
     public partial class MediaControl : UserControl
     {
-        private const int VolumeIncrementAdjustments = 10;
+        private const int VolumeIncrementAdjustments = 4;
 
         private Entity PanelEntity;
         
