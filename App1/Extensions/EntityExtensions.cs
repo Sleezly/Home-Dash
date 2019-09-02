@@ -14,6 +14,14 @@ namespace Hashboard
         /// <returns></returns>
         public static bool IsInOffState(this Entity entity)
         {
+            // Due to HomeAssistant rework of the Climate entity it's no longer possible to 
+            // differentiate between an 'off' and 'eco' climate control state. So let's just always
+            // assume the control is 'On' so that the control uses 'eco' mode panel color blending.
+            if (entity.EntityId.StartsWith("climate."))
+            {
+                return false;
+            }
+
             switch (entity.State.ToLower())
             {
                 case "false":
@@ -27,7 +35,7 @@ namespace Hashboard
                     return false;
             }
         }
-
+        
         /// <summary>
         /// Returns and RGB calculation of current color for this light bulb entity. Only applies if light-specific
         /// attributes are present.
