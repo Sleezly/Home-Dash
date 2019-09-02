@@ -12,20 +12,24 @@ namespace HashBoard
 
         protected override Panel CreateSinglePanel(Entity entity, int width, int height)
         {
-            Grid grid = new Grid();
-            grid.Width = width;
-            grid.Height = height;
-            grid.Padding = new Thickness(PanelMargins);
+            Grid grid = new Grid
+            {
+                Width = width,
+                Height = height,
+                Padding = new Thickness(PanelMargins)
+            };
 
-            TextBlock textBlock = new TextBlock();
-            textBlock.Foreground = FontColorBrush;
-            textBlock.FontWeight = FontWeights.Bold;
-            textBlock.FontSize = FontSize.HasValue ? FontSize.Value : base.FontSize;
-            textBlock.Text = entity.Attributes["friendly_name"] ?? string.Empty;
-            textBlock.TextWrapping = TextWrapping.Wrap;
-            textBlock.TextAlignment = TextAlignment.Center;
-            textBlock.HorizontalAlignment = HorizontalAlignment.Center;
-            textBlock.VerticalAlignment = VerticalAlignment.Center;
+            TextBlock textBlock = new TextBlock
+            {
+                Foreground = FontColorBrush,
+                FontWeight = FontWeights.Bold,
+                FontSize = FontSize ?? base.FontSize,
+                Text = entity.Attributes["friendly_name"] ?? string.Empty,
+                TextWrapping = TextWrapping.Wrap,
+                TextAlignment = TextAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
 
             if (entity.Attributes.ContainsKey("local_assets_picture"))
             {
