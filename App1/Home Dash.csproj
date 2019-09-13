@@ -174,8 +174,8 @@
     <Content Include="Assets\Weather\weather-fog.png" />
     <Content Include="Assets\Weather\weather-night.png" />
     <Content Include="Assets\Weather\weather-cloudy.png" />
-    <Content Include="Assets\Weather\cloud.png" />
-    <Content Include="Assets\Weather\weather-partlycloudy.png" />
+    <Content Include="Assets\Weather\weather-night-partly-cloudy.png" />
+    <Content Include="Assets\Weather\weather-partly-cloudy.png" />
     <Content Include="Assets\Weather\weather-sunny.png" />
     <Content Include="Assets\Weather\weather-pouring.png" />
     <Content Include="Assets\Weather\weather-snowy.png" />
@@ -238,13 +238,13 @@
       <Version>2.1.1</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
-      <Version>6.2.8</Version>
+      <Version>6.2.9</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Toolkit.Uwp.UI.Controls">
       <Version>5.1.1</Version>
     </PackageReference>
     <PackageReference Include="MQTTnet">
-      <Version>3.0.5</Version>
+      <Version>3.0.8</Version>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
       <Version>12.0.2</Version>
