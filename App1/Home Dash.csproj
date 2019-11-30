@@ -11,7 +11,7 @@
     <AssemblyName>Home Dash</AssemblyName>
     <DefaultLanguage>en-US</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
-    <TargetPlatformVersion Condition=" '$(TargetPlatformVersion)' == '' ">10.0.17763.0</TargetPlatformVersion>
+    <TargetPlatformVersion Condition=" '$(TargetPlatformVersion)' == '' ">10.0.17134.0</TargetPlatformVersion>
     <TargetPlatformMinVersion>10.0.17134.0</TargetPlatformMinVersion>
     <MinimumVisualStudioVersion>14</MinimumVisualStudioVersion>
     <FileAlignment>512</FileAlignment>
@@ -126,6 +126,7 @@
     <Compile Include="Panel Builders\NameOnlyPanelBuilder.cs" />
     <Compile Include="Panel Builders\GenericPanelBuilder.cs" />
     <Compile Include="Panel Builders\PanelData.cs" />
+    <Compile Include="Security\Secrets.cs" />
     <Compile Include="Utilities\Telemetry.cs" />
     <Compile Include="Utilities\ColorConverter.cs" />
     <Compile Include="Panel Builders\LightPanelBuilder.cs" />
@@ -253,6 +254,7 @@
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
+  <ItemGroup />
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
     <VisualStudioVersion>14.0</VisualStudioVersion>
   </PropertyGroup>

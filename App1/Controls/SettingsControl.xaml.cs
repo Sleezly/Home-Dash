@@ -30,11 +30,6 @@ namespace Hashboard
                 TextBox homeAssistantPort = this.FindName("HomeAssistantPortText") as TextBox;
                 homeAssistantPort.Text = HomeAssistantPort;
             }
-            if (null != HomeAssistantPassword)
-            {
-                PasswordBox homeAssistantPassword = this.FindName("HomeAssistantPasswordText") as PasswordBox;
-                homeAssistantPassword.Password = HomeAssistantPassword;
-            }
             if (null != MqttBrokerHostname)
             {
                 TextBox mqttBrokerHostname = this.FindName("MqttBrokerHostnameText") as TextBox;
@@ -76,7 +71,6 @@ namespace Hashboard
             settingsChanged |= (HttpProtocol != homeAssistantProtocol.Text);
             settingsChanged |= (HomeAssistantHostname != homeAssistantHostname.Text);
             settingsChanged |= (HomeAssistantPort != homeAssistantPort.Text);
-            settingsChanged |= (HomeAssistantPassword != homeAssistantPassword.Password);
             settingsChanged |= (MqttBrokerHostname != mqttBrokerHostname.Text);
             settingsChanged |= (MqttUsername != mqttUsername.Text);
             settingsChanged |= (MqttPassword != mqttPassword.Password);
@@ -85,7 +79,6 @@ namespace Hashboard
             HttpProtocol = homeAssistantProtocol.Text;
             HomeAssistantHostname = homeAssistantHostname.Text;
             HomeAssistantPort = homeAssistantPort.Text;
-            HomeAssistantPassword = homeAssistantPassword.Password;
             MqttBrokerHostname = mqttBrokerHostname.Text;
             MqttUsername = mqttUsername.Text;
             MqttPassword = mqttPassword.Password;
@@ -136,21 +129,6 @@ namespace Hashboard
             private set
             {
                 localSettings.Values["HomeAssistantPort"] = value;
-            }
-        }
-
-        /// <summary>
-        /// Api Password for the Home Assistant server.
-        /// </summary>
-        public static string HomeAssistantPassword
-        {
-            get
-            {
-                return localSettings.Values["HomeAssistantPassword"] as string;
-            }
-            private set
-            {
-                localSettings.Values["HomeAssistantPassword"] = value;
             }
         }
 

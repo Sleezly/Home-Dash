@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:HashBoard"
     Width="460"
-    Height="386"
+    Height="346"
     RequestedTheme="Default">
 
     <StackPanel x:Name="RootPanel" Orientation="Vertical" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="4">
@@ -22,10 +22,6 @@
         <Grid Padding="4">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">PORT</TextBlock>
             <TextBox x:Name="HomeAssistantPortText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="8123"></TextBox>
-        </Grid>
-        <Grid Padding="4">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">PASSWORD</TextBlock>
-            <PasswordBox x:Name="HomeAssistantPasswordText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Password=""></PasswordBox>
         </Grid>
         <Grid Padding="4">
             <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold">HOME ASSISTANT STATESTREAM via MQTT</TextBlock>

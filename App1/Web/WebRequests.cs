@@ -1,4 +1,5 @@
 ﻿using Hashboard;
+using HomeDash;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -11,8 +12,6 @@ namespace HashBoard
 {
     public class WebRequests
     {
-        private const string ApiPassword = "api_password";
-
         /// <summary>
         /// Waits for the network connection to become available.
         /// </summary>
@@ -32,7 +31,7 @@ namespace HashBoard
             const string apiAction = @"api/states";
             const uint maxRetries = 3;
 
-            Uri uri = new Uri($"{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/{apiAction}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
+            Uri uri = new Uri($"{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/{apiAction}");
 
             await WaitForNetworkAvailable();
 
@@ -42,6 +41,8 @@ namespace HashBoard
                 try
                 {
                     HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(uri);
+                    request.Headers.Add("Authorization", $"Bearer {Secrets.BearerToken}");
+
                     WebResponse webResponse = (HttpWebResponse)await Task.Factory.FromAsync<WebResponse>(request.BeginGetResponse, request.EndGetResponse, null);
 
                     Stream stream = webResponse.GetResponseStream();
@@ -53,7 +54,7 @@ namespace HashBoard
                 }
                 catch
                 {
-                    Telemetry.TrackTrace($"{nameof(GetData)} failed to get state data from HomeAssistant. Attempt [{attempt}]. Time {DateTime.Now}.");
+                    Telemetry.TrackTrace($"{ nameof(GetData)} failed to get state data from HomeAssistant. Attempt [{attempt}]. Time {DateTime.Now}.");
 
                     await Task.Delay(100 + (attempt * 250));
 
@@ -93,7 +94,6 @@ namespace HashBoard
         public static void SendAction(string action, IEnumerable<string> entityIds, Dictionary<string, string> data)
         {
             string json = "{\"entity_id\":[" + string.Join(',', entityIds.Select(x => "\"" + x + "\"").ToList()) + "],";
-            //json += string.Join(",", data.Select(x => "\"" + x.Key + "\":\"" + x.Value + "\"").ToList()) + "}";
             json += ParseDictionaryToJson(data) + "}";
 
             WebRequests.SendData(entityIds.First().Split('.')[0], action, json);
@@ -115,11 +115,12 @@ namespace HashBoard
         {
             Task.Factory.StartNew(async () =>
             {
-                Uri uri = new Uri($"{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}?{ApiPassword}={SettingsControl.HomeAssistantPassword}");
+                Uri uri = new Uri($"{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}");
 
-                Telemetry.TrackTrace($"{nameof(SendData)} Uri:{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action}?{ApiPassword}=[xxxx] Json:{data}");
+                Telemetry.TrackTrace($"{nameof(SendData)} Uri:{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}/api/services/{domain}/{action} Json:{data}");
 
                 HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(uri);
+                request.Headers.Add("Authorization", $"Bearer {Secrets.BearerToken}");
 
                 System.Text.UTF8Encoding encoding = new System.Text.UTF8Encoding();
                 byte[] bytes = encoding.GetBytes(data);
