@@ -13,6 +13,11 @@ namespace HashBoard
     public class WebRequests
     {
         /// <summary>
+        /// Secrets management and retrieval.
+        /// </summary>
+        private static readonly Secrets Secrets = new Secrets();
+
+        /// <summary>
         /// Waits for the network connection to become available.
         /// </summary>
         /// <returns></returns>
