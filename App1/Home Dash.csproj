@@ -126,7 +126,6 @@
     <Compile Include="Panel Builders\NameOnlyPanelBuilder.cs" />
     <Compile Include="Panel Builders\GenericPanelBuilder.cs" />
     <Compile Include="Panel Builders\PanelData.cs" />
-    <Compile Include="Security\Secrets.cs" />
     <Compile Include="Utilities\Telemetry.cs" />
     <Compile Include="Utilities\ColorConverter.cs" />
     <Compile Include="Panel Builders\LightPanelBuilder.cs" />
@@ -254,7 +253,9 @@
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Security\" />
+  </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
     <VisualStudioVersion>14.0</VisualStudioVersion>
   </PropertyGroup>
