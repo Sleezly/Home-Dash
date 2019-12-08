@@ -387,15 +387,14 @@ namespace HashBoard
                     if (popup.Child is SettingsControl)
                     {
                         // Save application settings when closing the Settings popup
-                        if ((popup.Child as SettingsControl).SaveSettings())
-                        {
-                            // Settings value changed, so update frame, reconnect to MQTT and refresh al tiles
-                            await LoadFrame();
+                        (popup.Child as SettingsControl).SaveSettings();
 
-                            await MqttSubscriber.Connect();
+                        // Reload UI, reconnect to MQTT and refresh all tiles
+                        await LoadFrame();
 
-                            await UpdateEntitiesSinceLastUpdate(default(DateTime));
-                        }
+                        await MqttSubscriber.Connect();
+
+                        await UpdateEntitiesSinceLastUpdate(default(DateTime));
                     }
                     else if (popup.Child is ThemeControl)
                     {
@@ -403,12 +402,17 @@ namespace HashBoard
                     }
                 };
 
-                popupContent.Loaded += (s, re) =>
+                popupContent.Loaded += async (s, re) =>
                 {
                     UserControl userControl = s as UserControl;
 
                     popup.HorizontalOffset = Window.Current.Bounds.Width / 2 - userControl.ActualWidth / 2;
                     popup.VerticalOffset = Window.Current.Bounds.Height / 2 - userControl.ActualHeight / 2;
+
+                    if (popup.Child is SettingsControl)
+                    {
+                        await MqttSubscriber.Disconnect();
+                    }
                 };
 
                 popup.IsOpen = true;

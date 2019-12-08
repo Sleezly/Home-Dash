@@ -154,10 +154,7 @@ namespace HashBoard
             // Do not attempt to reconnect when we disconnect
             AttemptReconnectOnDisconnect = false;
 
-            if (MqttClient.IsConnected)
-            {
-                await MqttClient.DisconnectAsync();
-            }
+            await MqttClient.DisconnectAsync();
         }
     }
 }
