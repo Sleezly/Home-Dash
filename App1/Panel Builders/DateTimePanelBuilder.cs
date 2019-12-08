@@ -26,7 +26,7 @@ namespace HashBoard
                 Foreground = FontColorBrush,
                 FontWeight = FontWeights.Bold,
                 FontSize = FontSize ?? base.FontSize,
-                Text = dateTime.ToShortTimeString() + "\n\n" + dateTime.ToLongDateString(),
+                Text = dateTime.ToString("h:mm tt") + "\n\n" + dateTime.ToLongDateString(),
                 TextWrapping = TextWrapping.Wrap,
                 HorizontalTextAlignment = TextAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center,
