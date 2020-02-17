@@ -13,11 +13,11 @@
         </Grid>
         <Grid Padding="4">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">PROTOCOL</TextBlock>
-            <TextBox x:Name="HomeAssistantProtocolText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="http"></TextBox>
+            <TextBox x:Name="HomeAssistantProtocolText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="https"></TextBox>
         </Grid>
         <Grid Padding="4">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">HOSTNAME</TextBlock>
-            <TextBox x:Name="HomeAssistantHostnameText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="192.168.1.2"></TextBox>
+            <TextBox x:Name="HomeAssistantHostnameText" HorizontalAlignment="Right" VerticalAlignment="Center" Width="220" Text="leslietrowbridge.com"></TextBox>
         </Grid>
         <Grid Padding="4">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">PORT</TextBlock>
