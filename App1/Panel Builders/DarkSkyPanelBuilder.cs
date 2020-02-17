@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Hashboard;
+using System;
 using System.Collections.Generic;
 using Windows.UI;
 using Windows.UI.Xaml;
@@ -27,7 +28,7 @@ namespace HashBoard
 
             TextBlock textDate = new TextBlock
             {
-                Text = entity.Attributes["friendly_name"] ?? string.Empty,
+                Text = entity.Name(),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Top,
                 Foreground = FontColorBrush

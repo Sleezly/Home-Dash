@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Hashboard;
+using System;
 using System.Collections.Generic;
 using Windows.UI.Text;
 using Windows.UI.Xaml;
@@ -21,7 +22,7 @@ namespace HashBoard
 
             TextBlock textName = new TextBlock
             {
-                Text = entity.Attributes.ContainsKey("friendly_name") ? entity.Attributes["friendly_name"] ?? string.Empty : string.Empty,
+                Text = entity.Name(),
                 FontSize = FontSize,
                 TextWrapping = TextWrapping.Wrap,
                 TextAlignment = TextAlignment.Center,

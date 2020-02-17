@@ -72,7 +72,7 @@ namespace Hashboard
             TextBlock currentTemperature = this.FindName("CurrentTemperature") as TextBlock;
             TextBlock targetTemperature = this.FindName("TargetTemperature") as TextBlock;
 
-            deviceName.Text = ClimateEntity.Attributes["friendly_name"].ToUpper();
+            deviceName.Text = ClimateEntity.Name().ToUpper();
             currentTemperature.Text = $"ACTUAL: {ClimateEntity.Attributes["current_temperature"]}";
             targetTemperature.Text = $"{ClimateEntity.Attributes["temperature"] ?? ClimateEntity.State}";
 

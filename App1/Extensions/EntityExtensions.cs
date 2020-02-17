@@ -1,8 +1,6 @@
 ﻿using HashBoard;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using static HashBoard.Entity;
 
 namespace Hashboard
 {
@@ -35,7 +33,35 @@ namespace Hashboard
                     return false;
             }
         }
-        
+        /// <summary>
+        /// Determines if the entity is unavailable or not.
+        /// </summary>
+        /// <returns></returns>
+        public static bool IsUnavailable(this Entity entity)
+        {
+            switch (entity.State.ToLower())
+            {
+                case "unavailable":
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets the name of the Entity object.
+        /// </summary>
+        /// <param name="entity">Entity.</param>
+        /// <returns>Name</returns>
+        public static string Name(this Entity entity)
+        {
+            return entity.Attributes.ContainsKey("friendly_name") ?
+                entity.Attributes["friendly_name"] ??
+                entity.EntityId.Split(".")[1].Replace("_", " ") :
+                entity.EntityId.Split(".")[1].Replace("_", " ");
+        }
+
         /// <summary>
         /// Returns and RGB calculation of current color for this light bulb entity. Only applies if light-specific
         /// attributes are present.

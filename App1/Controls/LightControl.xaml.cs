@@ -99,7 +99,7 @@ namespace Hashboard
             if (PanelEntity.Attributes.ContainsKey("friendly_name"))
             {
                 TextBlock textBlock = FindName("DeviceText") as TextBlock;
-                textBlock.Text = PanelEntity.Attributes["friendly_name"].ToUpper();
+                textBlock.Text = PanelEntity.Name().ToUpper();
             }
 
             // For the group panel, average the color of children entities together

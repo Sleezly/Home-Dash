@@ -89,7 +89,7 @@ namespace HashBoard
             if (panel.Background == null)
             {
                 // Non-interactive panels should have no color
-                if (TapEventHandler == null && HoldEventHandler == null)
+                if ((TapEventHandler == null && HoldEventHandler == null) || entity.IsUnavailable())
                 {
                     panel.Background = new SolidColorBrush(NoninteractiveBrushColor);
                 }

@@ -22,7 +22,7 @@ namespace HashBoard
 
             TextBlock textName = new TextBlock
             {
-                Text = entity.Attributes["friendly_name"] ?? string.Empty,
+                Text = entity.Name(),
                 FontSize = base.FontSize,
                 TextWrapping = TextWrapping.Wrap,
                 HorizontalAlignment = HorizontalAlignment.Center,

@@ -46,14 +46,7 @@ namespace Hashboard
         {
             // Device Text
             TextBlock textDeviceText = FindName("DeviceText") as TextBlock;
-            if (PanelEntity.Attributes.ContainsKey("friendly_name"))
-            {
-                textDeviceText.Text = PanelEntity.Attributes["friendly_name"].ToUpper();
-            }
-            else
-            {
-                textDeviceText.Text = string.Empty;
-            }
+            textDeviceText.Text = PanelEntity.Name().ToUpper();
 
             // Artist Text
             TextBlock textArtistText = FindName("ArtistText") as TextBlock;
