@@ -71,7 +71,7 @@ namespace Hashboard
             }
 
             // Bose has "media_track" and "media_title" but we just want the track name so do this after "media_title"
-            if (PanelEntity.Attributes.ContainsKey("media_track"))
+            if (PanelEntity.Attributes.ContainsKey("media_track") && null != PanelEntity.Attributes["media_track"] as string)
             {
                 textTrackText.Text = PanelEntity.Attributes["media_track"].ToUpper();
             }
