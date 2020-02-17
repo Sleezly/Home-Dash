@@ -474,6 +474,11 @@ namespace HashBoard
         {
             PanelData panelData = PanelData.GetPanelData(sender);
 
+            if (panelData.Entity.IsUnavailable())
+            {
+                return;
+            }
+
             if (MousePressStartTime + TimeSpan.FromSeconds(3) > DateTime.Now &&
                 MousePressStartTime + TimeSpan.FromMilliseconds(300) < DateTime.Now)
             {
@@ -600,6 +605,11 @@ namespace HashBoard
         /// <param name="panel"></param>
         private void MarkPanelAsPressed(Panel panel)
         {
+            if (PanelData.GetPanelData(panel).Entity.IsUnavailable())
+            {
+                return;
+            }
+
             panel.Background.Opacity = PanelBuilderBase.PressedOpacity;
         }
 
@@ -609,7 +619,9 @@ namespace HashBoard
         /// <param name="panel"></param>
         private void MarkPanelAsDefaultState(Panel panel)
         {
-            if (PanelData.GetPanelData(panel).Entity.IsInOffState())
+            Entity entity = PanelData.GetPanelData(panel).Entity;
+
+            if (entity.IsInOffState() || entity.IsUnavailable())
             {
                 panel.Background.Opacity = PanelBuilderBase.StateIsOffOpacity;
             }
@@ -887,30 +899,6 @@ namespace HashBoard
         }
 
         /// <summary>
-        /// Creates a custom panel.
-        /// </summary>
-        /// <param name="childrenEntities"></param>
-        /// <returns></returns>
-        private WrapPanel CreateCustomGroupPanel(IEnumerable<Entity> childrenEntities)
-        { 
-            // Create the custom group to hold the panel
-            Entity view = new Entity()
-            {
-                EntityId = $"group.{StaticGroupPanelName}",
-                LastChanged = DateTime.Now,
-                LastUpdated = DateTime.Now,
-                State = "off",
-                Attributes = new Dictionary<string, dynamic>() {
-                    { "friendly_name", StaticGroupPanelName },
-                    { "entity_id", childrenEntities.Select(x => x.EntityId).ToList() },
-                    { "order", 999 },
-                    { "view", true },
-            } };
-
-            return CreateEntitiesInView(view, childrenEntities);
-        }
-
-        /// <summary>
         /// Create a header for the provided group view entity.
         /// </summary>
         /// <param name="entity"></param>
@@ -928,7 +916,7 @@ namespace HashBoard
 
             TextBlock textBlock = new TextBlock
             {
-                Text = Convert.ToString(entity.Attributes["friendly_name"]).ToUpper(),
+                Text = Convert.ToString(entity.Name()).ToUpper(),
                 FontSize = 18,
                 FontWeight = FontWeights.Bold,
                 Foreground = new SolidColorBrush(Colors.White)
@@ -974,7 +962,7 @@ namespace HashBoard
                     {
                         { "entity_id", new Newtonsoft.Json.Linq.JArray() },
                         { "friendly_name", "settings" },
-                        { "view", "yes" }
+                        { "order", 9999 }
                     },
                 };
 
@@ -987,7 +975,7 @@ namespace HashBoard
             settingsGroupEntity.Attributes["entity_id"].AddFirst(settingsEntity.EntityId);
 
             // Get all home assistant "group" entities which have the "view=true" attribute set in customizations.yaml
-            List<Entity> entityHeaders = allEntities.Where(group => group.Attributes.ContainsKey("view")).ToList();
+            List<Entity> entityHeaders = allEntities.Where(group => group.Attributes.ContainsKey("order")).ToList();
 
             // Add all single and group entities which are tied to each view
             foreach (Entity entityHeader in entityHeaders)
