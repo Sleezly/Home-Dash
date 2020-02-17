@@ -44,13 +44,13 @@ namespace HashBoard
         {
             Uri imageUri;
 
-            if (asset.Contains("http"))
+            if (asset.Contains(SettingsControl.HttpProtocol))
             {
                 imageUri = new Uri(asset);
             }
             else
             {
-                imageUri = new Uri($"http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}{asset}");
+                imageUri = new Uri($"{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}{asset}");
             }
 
             BitmapImage bitmapImage = new BitmapImage(imageUri);
@@ -82,7 +82,7 @@ namespace HashBoard
 
         public static ImageSource LoadImageSource(string asset)
         {
-            Uri imageUri = new Uri($"http://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}{asset}");
+            Uri imageUri = new Uri($"{SettingsControl.HttpProtocol}://{SettingsControl.HomeAssistantHostname}:{SettingsControl.HomeAssistantPort}{asset}");
 
             return new BitmapImage(imageUri);
         }
