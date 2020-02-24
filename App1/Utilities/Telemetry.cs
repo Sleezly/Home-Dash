@@ -1,4 +1,5 @@
-﻿using Microsoft.HockeyApp;
+﻿using Microsoft.AppCenter.Analytics;
+using Microsoft.AppCenter.Crashes;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,7 +11,7 @@ namespace Hashboard
         public static void TrackEvent(string key, IDictionary<string, string> properties = null)
         {
             Debug.WriteLine($"{key} {(null != properties ? string.Join(", ", properties) : string.Empty)}");
-            HockeyClient.Current.TrackEvent(key, properties);
+            Analytics.TrackEvent(key, properties);
         }
 
         public static void TrackTrace(string message, IDictionary<string, string> properties = null)
@@ -22,12 +23,12 @@ namespace Hashboard
         {
             if (null != ex)
             {
-                HockeyClient.Current.TrackException(ex);
-                HockeyClient.Current.TrackEvent($"Exception: {method}", ex.ToDictionary());
+                Analytics.TrackEvent(method, ex.ToDictionary());
+                Crashes.TrackError(ex, ex.ToDictionary());
             }
             else
             {
-                HockeyClient.Current.TrackEvent(method);
+                Analytics.TrackEvent(method);
             }
         }
     }

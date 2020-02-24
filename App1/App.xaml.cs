@@ -1,4 +1,7 @@
-﻿using Microsoft.HockeyApp;
+﻿using HomeDash;
+using Microsoft.AppCenter;
+using Microsoft.AppCenter.Analytics;
+using Microsoft.AppCenter.Crashes;
 using System;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
@@ -20,13 +23,9 @@ namespace HashBoard
         /// </summary>
         public App()
         {
-//#if DEBUG
-//            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.Auto;
-//#else
+            AppCenter.Start(Secrets.AppCenterToken, typeof(Analytics), typeof(Crashes));
+          
             ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
-            //#endif
-            
-            HockeyClient.Current.Configure("38f851028ab5480895b21df30d901ae9");
 
             this.InitializeComponent();
             this.Suspending += OnSuspending;
