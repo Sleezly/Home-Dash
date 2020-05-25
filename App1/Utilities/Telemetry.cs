@@ -11,7 +11,7 @@ namespace Hashboard
         public static void TrackEvent(string key, IDictionary<string, string> properties = null)
         {
             Debug.WriteLine($"{key} {(null != properties ? string.Join(", ", properties) : string.Empty)}");
-            Analytics.TrackEvent(key, properties);
+            //Analytics.TrackEvent(key, properties);
         }
 
         public static void TrackTrace(string message, IDictionary<string, string> properties = null)
@@ -21,15 +21,15 @@ namespace Hashboard
 
         public static void TrackException(string method, Exception ex)
         {
-            if (null != ex)
-            {
-                Analytics.TrackEvent(method, ex.ToDictionary());
-                Crashes.TrackError(ex, ex.ToDictionary());
-            }
-            else
-            {
-                Analytics.TrackEvent(method);
-            }
+            //if (null != ex)
+            //{
+            //    Analytics.TrackEvent(method, ex.ToDictionary());
+            //    Crashes.TrackError(ex, ex.ToDictionary());
+            //}
+            //else
+            //{
+            //    Analytics.TrackEvent(method);
+            //}
         }
     }
 }

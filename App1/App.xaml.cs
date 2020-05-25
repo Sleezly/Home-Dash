@@ -23,7 +23,7 @@ namespace HashBoard
         /// </summary>
         public App()
         {
-            AppCenter.Start(Secrets.AppCenterToken, typeof(Analytics), typeof(Crashes));
+            //AppCenter.Start(Secrets.AppCenterToken, typeof(Analytics), typeof(Crashes));
           
             ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
 
