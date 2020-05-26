@@ -72,6 +72,7 @@ namespace HashBoard
         {
             nameof(MediaControl),
             nameof(LightControl),
+            nameof(CoverControl),
             nameof(ClimateControl),
             nameof(SettingsControl),
             nameof(ThemeControl),
@@ -268,6 +269,12 @@ namespace HashBoard
                     EntityIdStartsWith = "light.",
                     TapHandler = new PanelTouchHandler("toggle", ResponseExpected.EntityUpdated),
                     TapAndHoldHandler = new PanelTouchHandler(nameof(LightControl), ResponseExpected.None) },
+                          
+                // Cover Platform
+                new CoverPanelBuilder() {
+                    EntityIdStartsWith = "cover.",
+                    TapHandler = new PanelTouchHandler("toggle", ResponseExpected.EntityUpdated),
+                    TapAndHoldHandler = new PanelTouchHandler(nameof(CoverControl), ResponseExpected.None) },
 
                 // Script Platform
                 new NameOnlyPanelBuilder() {
@@ -278,7 +285,7 @@ namespace HashBoard
                 new GenericPanelBuilder() {
                     EntityIdStartsWith = "switch.",
                     TapHandler = new PanelTouchHandler("toggle", ResponseExpected.EntityUpdated) },
-
+                
                 // Automation Platform
                 new GenericPanelBuilder() {
                     EntityIdStartsWith = "automation.",
@@ -335,6 +342,11 @@ namespace HashBoard
                 case nameof(LightControl):
                     popupContent = new LightControl(entity, childrenEntities);
                     NotifyPopupEntityUpdate = (popupContent as LightControl).EntityUpdated;
+                    break;
+
+                case nameof(CoverControl):
+                    popupContent = new CoverControl(entity);
+                    NotifyPopupEntityUpdate = (popupContent as CoverControl).EntityUpdated;
                     break;
 
                 case nameof(MediaControl):
