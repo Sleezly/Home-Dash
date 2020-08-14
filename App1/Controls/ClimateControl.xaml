@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:HashBoard"
     Width="300"
-    Height="440">
+    Height="480">
 
     <StackPanel x:Name="RootPanel" Orientation="Vertical" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="4">
         <TextBlock x:Name="DeviceText" HorizontalAlignment="Center" Text="DEVICE" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" FontSize="22" FontWeight="Bold" Padding="4"/>
@@ -29,6 +29,10 @@
         <Grid Padding="6">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" Text="OPERATION" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" FontSize="18" />
             <ComboBox x:Name="ComboOperation" HorizontalAlignment="Right" VerticalAlignment="Center" Width="160" SelectionChanged="ComboOperation_SelectionChanged" />
+        </Grid>
+        <Grid Padding="6">
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" Text="PRESET" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" FontSize="18" />
+            <ComboBox x:Name="ComboPreset" HorizontalAlignment="Right" VerticalAlignment="Center" Width="160" SelectionChanged="ComboPreset_SelectionChanged" />
         </Grid>
         <Grid Padding="6">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" Text="FAN MODE" Foreground="{ThemeResource DefaultTextForegroundThemeBrush}" FontSize="18" />

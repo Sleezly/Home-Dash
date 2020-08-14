@@ -11,7 +11,7 @@ namespace Hashboard
 {
     public partial class ClimateControl : UserControl
     {
-        Entity ClimateEntity;
+        private Entity ClimateEntity;
 
         public ClimateControl(Entity entity)
         {
@@ -37,9 +37,18 @@ namespace Hashboard
 
         public static LinearGradientBrush CreateLinearGradientBrush(Entity entity)
         {
+            string presetMode = entity.Attributes["preset_mode"];
+
+            return !string.IsNullOrEmpty(presetMode) && !string.Equals("none", presetMode, StringComparison.OrdinalIgnoreCase) ?
+                CreateLinearGradientBrushFromState(presetMode) :
+                CreateLinearGradientBrushFromState(entity.State);
+        }
+
+        private static LinearGradientBrush CreateLinearGradientBrushFromState(string state)
+        {
             LinearGradientBrush lgb = new LinearGradientBrush();
 
-            switch (entity.State.ToLowerInvariant())
+            switch (state.ToLowerInvariant())
             {
                 case "off":
                 case "eco":
@@ -95,6 +104,19 @@ namespace Hashboard
 
             comboOperation.SelectedItem = ClimateEntity.State;
             comboOperation.SelectionChanged += ComboOperation_SelectionChanged;
+
+            // Preset drop-down
+            ComboBox comboPreset = this.FindName("ComboPreset") as ComboBox;
+            comboPreset.SelectionChanged -= ComboPreset_SelectionChanged;
+            comboPreset.Items.Clear();
+
+            foreach (string item in ClimateEntity.Attributes["preset_modes"])
+            {
+                comboPreset.Items.Add(item);
+            }
+
+            comboPreset.SelectedItem = ClimateEntity.Attributes["preset_mode"] as string;
+            comboPreset.SelectionChanged += ComboPreset_SelectionChanged;
 
             // Fan Mode drop-down
             ComboBox comboFanMode = this.FindName("ComboFanMode") as ComboBox;            
@@ -186,6 +208,18 @@ namespace Hashboard
             WebRequests.SendAction("climate", "set_fan_mode", new Dictionary<string, string>() {
                 { "entity_id", ClimateEntity.EntityId },
                 { "fan_mode", comboBox.SelectedItem.ToString() },
+            });
+        }
+
+        private void ComboPreset_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ComboBox comboBox = sender as ComboBox;
+
+            ClimateEntity.Attributes["preset_mode"] = comboBox.SelectedItem.ToString();
+
+            WebRequests.SendAction("climate", "set_preset_mode", new Dictionary<string, string>() {
+                { "entity_id", ClimateEntity.EntityId },
+                { "preset_mode", comboBox.SelectedItem.ToString() },
             });
         }
     }
